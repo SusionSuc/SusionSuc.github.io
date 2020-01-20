@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>VirtualApk插件APK的解析 | susion</title>
+    
+    
+        <meta name="keywords" content="VirtualApk插件APK的解析" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="本文主要来看一下在插件化技术中，实现宿主运行时使用插件apk类、资源等原理。(宿主即我们的主apk。插件apk即可以被加载的插件模块)。本文所谈的实现引用自: VirtualApk 另外欢迎关注我的Android进阶计划， 好，开始: 插件apk中resource访问插件化技术应该实现: 对于插件中的资源在插件中仍然可以使用R.xxx.xx的方式来使用。但是要知道插件是在apk安装后加载的。我们日">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VirtualApk插件APK的解析">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="本文主要来看一下在插件化技术中，实现宿主运行时使用插件apk类、资源等原理。(宿主即我们的主apk。插件apk即可以被加载的插件模块)。本文所谈的实现引用自: VirtualApk 另外欢迎关注我的Android进阶计划， 好，开始: 插件apk中resource访问插件化技术应该实现: 对于插件中的资源在插件中仍然可以使用R.xxx.xx的方式来使用。但是要知道插件是在apk安装后加载的。我们日">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/%E6%8F%92%E4%BB%B6%E5%8C%96/%E7%AE%80%E5%8D%95%E7%9A%84%E7%B1%BB%E5%8A%A0%E8%BD%BD%E9%80%BB%E8%BE%91.png">
+<meta property="article:published_time" content="2019-02-28T03:09:02.689Z">
+<meta property="article:modified_time" content="2020-01-20T11:56:22.637Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/%E6%8F%92%E4%BB%B6%E5%8C%96/%E7%AE%80%E5%8D%95%E7%9A%84%E7%B1%BB%E5%8A%A0%E8%BD%BD%E9%80%BB%E8%BE%91.png">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/插件化/VirtualApk插件APK的解析" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/">插件化</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">
+            <time datetime="2019-02-28T03:09:02.689Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            VirtualApk插件APK的解析
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <p>本文主要来看一下在插件化技术中，实现宿主运行时使用插件<code>apk</code>类、资源等原理。(宿主即我们的主apk。插件apk即可以被加载的插件模块)。本文所谈的实现引用自: <a href="https://github.com/didi/VirtualAPK" target="_blank" rel="noopener">VirtualApk</a></p>
+<p>另外欢迎关注我的<a href="https://github.com/SusionSuc/AdvancedAndroid" target="_blank" rel="noopener">Android进阶计划</a>， 好，开始:</p>
+<h2 id="插件apk中resource访问"><a href="#插件apk中resource访问" class="headerlink" title="插件apk中resource访问"></a>插件apk中resource访问</h2><p>插件化技术应该实现: 对于插件中的资源在插件中仍然可以使用<code>R.xxx.xx</code>的方式来使用。但是要知道插件是在apk安装后加载的。我们日常访问资源都是使用<code>context.getResources()</code>。很明显，这个<code>Resources</code>中是不会包含插件中的资源的。那么如何解决这个问题呢？</p>
+<p>我们先来回顾一下Android中的资源分类, Android中的资源分为两大类 : 可直接访问的资源、无法直接访问的原生资源。</p>
+<ul>
+<li>直接访问资源 : 这些资源可以使用 R.xx.xx 进行访问, 都保存在res目录下, 在编译的时候, 会自动生成R.java 资源索引文件。</li>
+<li>原生资源 : 这些资源存放在assets下, 不能使用R类进行访问, 只能通过 AssetManager 以二进制流形式读取资源。</li>
+</ul>
+<p>先来回顾一下<code>AssetManager</code>和<code>Resources</code>:</p>
+<h3 id="Resources"><a href="#Resources" class="headerlink" title="Resources"></a>Resources</h3><p>在Android中我们可以通过这个类来访问我们应用程序的资源。我们知道<code>Android</code>在构建过程中会为每个资源生产一个符号(就是我们编码过程中的各种资源id)文件<code>R.java</code>。<code>Resources</code>提供了许多方法，允许我们通过id来访问资源。比如:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int getColor(int id, Resourcess.Theme theme)  返回与特定资源ID关联的主题颜色整数。</span><br></pre></td></tr></table></figure>
+
+<h3 id="AssetManager"><a href="#AssetManager" class="headerlink" title="AssetManager"></a>AssetManager</h3><p><code>AssetManager</code>是比<code>Resources</code>更低一级的实现。<code>Resources</code>可以使用<code>AssetManager</code>来构造的。<code>Resources</code>提供给开发者一个十分方便的访问应用程序资源的方式。不过对于原生资源(assets目录下)就没有办法访问了。<code>AssetManager</code>允许我们可以直接访问这些资源文件。<br>比如对于应用程序<code>assets</code>目录下的文件，我们就可以通过<code>AssetManager</code>来访问:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">InputStream open(String fileName, int accessMode)</span><br></pre></td></tr></table></figure>
+
+<p><em>所以我们是不是把插件中的资源放到<code>AssetManager</code>,然后新构造一个Resouce就OK了呢？</em></p>
+<p>插件<code>apk</code>的Resources我们可以通过<code>AssetManager.addAssetPath(apkPath)</code>来加入到<code>AssetManager</code>中。我们来看一下这个方法:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * Add an additional set of assets to the asset manager.  This can be</span><br><span class="line"> * either a directory or ZIP file.  Not for use by applications.  Returns</span><br><span class="line"> * the cookie of the added asset, or 0 on failure.</span><br><span class="line"> * &#123;@hide&#125;</span><br><span class="line"> *&#x2F;</span><br><span class="line">public final int addAssetPath(String path) &#123;</span><br><span class="line">    return  addAssetPathInternal(path, false); &#x2F;&#x2F;最终会调用到native的方法。</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是只是添加到<code>AssetManager</code>中是不行的，这是因为我们日常开发访问的是<code>Resources</code>的API,那么如何让<code>Resources</code>含有插件的资源列表呢？我们可以使用<code>AssetManager</code>来新构造一个<code>Resources</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * Create a new Resources object on top of an existing set of assets in an AssetManager.</span><br><span class="line"> *&#x2F;</span><br><span class="line">@Deprecated</span><br><span class="line">public Resources(AssetManager assets, DisplayMetrics metrics, Configuration config) &#123;</span><br><span class="line">    .....</span><br><span class="line">    mResourcesImpl &#x3D; new ResourcesImpl(assets, metrics, config, new DisplayAdjustments());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即通过<code>new Resources(assetManager, hostResources.getDisplayMetrics(), hostResources.getConfiguration())</code>。我们就可以把上面add到<code>AssetManager</code>的插件资源和原有的<code>apk</code>资源整合成一个<code>Resources</code>。</p>
+<p>那么接下来，我们只要让插件在获得资源时，是从上面这个整合过的<code>Resources</code>中获取就可以完成在插件中直接访问插件资源了。上面解析的三步实现伪代码如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Resources hostResources &#x3D; hostContext.getResources(); &#x2F;&#x2F;hostContext是宿主的context，这个资源是在编译时就确定好的。</span><br><span class="line">AssetManager assetManager &#x3D; hostResources.getAssets(); &#x2F;&#x2F;拿到宿主的 AssetManager</span><br><span class="line">assetManager.addAssetPath(apkPath)  &#x2F;&#x2F; 这一步需要通过反射来完成</span><br><span class="line">Resources newResources &#x3D; new Resources(assetManager, hostResources.getDisplayMetrics(), hostResources.getConfiguration()); &#x2F;&#x2F;整合宿主资源和插件资源为一个资源</span><br><span class="line">......</span><br><span class="line">替换插件中访问的Resources为新整合的Resources : 由于在插件中也是通过&#96;context.getResources()&#96;来获取Resources。因此我们只需要hook插件对&#96;Resources&#96;的获取，返回我们整合过的 newResources即可。</span><br></pre></td></tr></table></figure>
+
+<p>通过上面的步骤，就可以实现插件中使用插件的资源，并且由于新的资源是整合过的，其实也可以实现在宿主中使用插件的资源。</p>
+<p>不过使用这个方式是存在一些问题的:</p>
+<ol>
+<li><code>AssetManager.addAssetPath(apkPath)</code>这个方法需要反射调用</li>
+<li><code>new Resources()</code>官方API是指明不允许的</li>
+<li>不同厂商对于资源<code>Resource</code>的构造是不同的。</li>
+</ol>
+<h2 id="插件APK中类的加载"><a href="#插件APK中类的加载" class="headerlink" title="插件APK中类的加载"></a>插件APK中类的加载</h2><p>如果在宿主中需要访问插件的一个类<code>AActivity.class</code>。如果你在直接访问肯定会抛类找不到异常的，这是因为这个类根本就不能被<code>Classloader</code>加载，它找不到。那么如何让插件中的类可以被<code>Classloader</code>的加载呢? 这涉及到类的动态加载的问题。</p>
+<p>我们还是先来回顾一下<code>Classloader</code>的相关知识。在Android中存在两种类加载器 : <code>DexClassLoader</code>和<code>PathClassLoader</code>,他们俩的不同之处是:</p>
+<ul>
+<li>DexClassLoader可以加载jar/apk/dex，可以从SD卡中加载未安装的apk</li>
+<li>PathClassLoader只能加载系统中已经安装过的apk</li>
+</ul>
+<p>如果你对Android中的类加载过程还不是很了解，推荐看一下这篇文章 : <a href="https://www.jianshu.com/p/a620e368389a" target="_blank" rel="noopener">https://www.jianshu.com/p/a620e368389a</a></p>
+<p>所以我们可以通过<code>DexClassLoader</code>来加载插件apk中的类:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">DexClassLoader loader &#x3D; new DexClassLoader(apk.getAbsolutePath(), dexOutputPath, libsDir.getAbsolutePath(), parent);</span><br></pre></td></tr></table></figure>
+
+<p>可以加载插件apk的类的<code>DexClassLoader</code>已经构造完成了, 那么有什么用呢？要知道当app运行时，遇到一个未加载的插件类时，由于类加载的<code>双亲委派模型</code>，并不会到我们创建的这个<code>DexClassLoader</code>中去寻找未加载的类:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/%E6%8F%92%E4%BB%B6%E5%8C%96/%E7%AE%80%E5%8D%95%E7%9A%84%E7%B1%BB%E5%8A%A0%E8%BD%BD%E9%80%BB%E8%BE%91.png" alt=""></p>
+<p>如上图，即对于未加载的类，在寻找可以加载这个类的<code>Classloader</code>时，根本不会在我们新建的这个<code>DexClassLoader</code>中寻找。那怎么办呢？有两种思路:</p>
+<p>第一 : hook类加载过程，如果没有找到要加载的类，就手动调用新建的<code>DexClassLoader</code>来尝试加载这个类</p>
+<p>第二 : 当我们在使用<code>context.getClassLoader()</code>方法是你会发现，你拿到的是<code>PathClassLoader</code>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">public class PathClassLoader extends BaseDexClassLoader</span><br></pre></td></tr></table></figure>
+
+<p>即<code>PathClassLoader</code>是<code>BaseDexClassLoader</code>的子类。我们来看一下<code>BaseDexClassLoader</code>是如何加载一个未加载的类的:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;BaseDexClassLoader.findClass()</span><br><span class="line">protected Class&lt;?&gt; findClass(String name) throws ClassNotFoundException &#123;       </span><br><span class="line">    ......</span><br><span class="line">    Class c &#x3D; pathList.findClass(name, suppressedExceptions);</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;pathList的类型</span><br><span class="line">pathList &#x3D; new DexPathList(this, dexPath, librarySearchPath, null);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;DexPathList.java</span><br><span class="line">final class DexPathList &#123;</span><br><span class="line">    private Element[] dexElements;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即是在<code>pathList</code>中去寻找类。我们知道<code>DexClassLoader</code>也继承自<code>BaseDexClassLoader</code>。肯定也存在<code>pathList</code>。所以如果我们把<code>DexClassLoader</code>的<code>pathList</code>加在<code>PathClassLoader</code>的<code>pathList</code>中。那么app在运行时不就相当于会从我们构造的<code>DexClassLoader</code>中寻找类了？</p>
+<p>因此第二种方法就是把我们自己创建的<code>DexClassLoader</code>的<code>pathList</code>整合到可被搜寻的<code>Classloader</code>的<code>pathList</code>上,下面是主要代码实现思路:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">baseClassLoader &#x3D; context.getClassLoader();</span><br><span class="line">Object baseDexElements &#x3D; getDexElements(getPathList(baseClassLoader));  &#x2F;&#x2F;获取pathList</span><br><span class="line">Object newDexElements &#x3D; getDexElements(getPathList(dexClassLoader));</span><br><span class="line">Object allDexElements &#x3D; combineArray(baseDexElements, newDexElements); &#x2F;&#x2F;结合两个pathList，生成一个新的 DexElements 数组</span><br><span class="line">Object pathList &#x3D; getPathList(baseClassLoader);   </span><br><span class="line">Reflector.with(pathList).field(&quot;dexElements&quot;).set(allDexElements); &#x2F;&#x2F;把BaseClassLoader的pathList的 DexElements 替换为结合过的新的 DexElements</span><br></pre></td></tr></table></figure>
+
+<p>经过上面的操作，App运行时就可以加载插件中的类了。</p>
+<h2 id="插件APK四大组件相关信息的解析"><a href="#插件APK四大组件相关信息的解析" class="headerlink" title="插件APK四大组件相关信息的解析"></a>插件APK四大组件相关信息的解析</h2><p>上面关于插件的资源和类加载的问题都大致分析了一下。不过还有一个十分重要的问题我们需要来看一下，那就是插件中的四大组件，如何被宿主使用呢? 我们知道Android对于四大组件的处理是有特殊逻辑的，比如<code>Activity</code>必须在<code>AndroidManifest</code>文件中注册，并且自系统层面还有一系列校验机制。<br>不过本小节我们先不看如何实现宿主使用插件的四大组件的细节。我们先来看一下，如何把插件apk的四大相关信息给解析出来。这是实现宿主使用插件的四大组件的基础。那么怎么解析呢？</p>
+<p>其实Android提供了<code>PackageParser</code>,这个类主要用于对Android apk文件的解析。它会把一个<code>apk</code>解析成<code>PackageParser.Package</code>对象:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PackageParser.Package parsedPackage &#x3D; PackageParser().parsePackage(context, apkFile, PackageParser.PARSE_MUST_BE_APK);</span><br></pre></td></tr></table></figure>
+
+<h3 id="PackageParser-Package"><a href="#PackageParser-Package" class="headerlink" title="PackageParser.Package"></a>PackageParser.Package</h3><p>我们来看一下解析出来的<code>PackageParser.Package</code>都有什么:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">public final static class Package &#123;</span><br><span class="line">   ......</span><br><span class="line">   public final ArrayList&lt;Permission&gt; permissions &#x3D; new ArrayList&lt;Permission&gt;(0);</span><br><span class="line">   public final ArrayList&lt;PermissionGroup&gt; permissionGroups &#x3D; new ArrayList&lt;PermissionGroup&gt;(0);</span><br><span class="line">   public final ArrayList&lt;Activity&gt; activities &#x3D; new ArrayList&lt;Activity&gt;(0);</span><br><span class="line">   public final ArrayList&lt;Activity&gt; receivers &#x3D; new ArrayList&lt;Activity&gt;(0);</span><br><span class="line">   public final ArrayList&lt;Provider&gt; providers &#x3D; new ArrayList&lt;Provider&gt;(0);</span><br><span class="line">   public final ArrayList&lt;Service&gt; services &#x3D; new ArrayList&lt;Service&gt;(0);   </span><br><span class="line">   ...... </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>一个<code>PackageParser.Package</code>中除了上面列举的四大组件相关信息，还有一些签名啦等等(也可以猜测这个类解析出的信息主要来源自<code>AndroidManifest.xml</code>)。</p>
+<p>但需要注意的是，这里的<code>Activity</code>可不是我们理解的那个<code>Activity</code>,我们来看一下这个类的声明:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public final static class Activity extends Component&lt;ActivityIntentInfo&gt; &#123;</span><br><span class="line">    public final ActivityInfo info; &#x2F;&#x2F;在程序运行时用来表示一个activity的信息</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static class Component&lt;II extends IntentInfo&gt; &#123;</span><br><span class="line">    public final Package owner;</span><br><span class="line">    public final ArrayList&lt;II&gt; intents;</span><br><span class="line">    public final String className;</span><br><span class="line">    public Bundle metaData;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public final static class ActivityIntentInfo extends IntentInfo &#123;</span><br><span class="line">    public final Activity activity;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static class IntentInfo extends IntentFilter</span><br></pre></td></tr></table></figure>
+
+<p>通过大致了解上面4个类的继承结构以及与我们所了解的Android相关知识相结合，这里的<code>Component</code>是用来表示一个组件(常说的四大组件)。它持有着组件的类信息、intent信息等。<br><code>Provider</code>、<code>Service</code>的结构基本与<code>Activity</code>相同。</p>
+<p>即，通过<code>PackageParser</code>我们可以解析出一个<code>apk</code>中的四大组件、权限、包签名等信息。</p>
+<blockquote>
+<p>上文中其实有很多Android源码，这里推荐一个可以很方便、快速查看Android源码的网站: <a href="http://androidxref.com/" target="_blank" rel="noopener">http://androidxref.com/</a> 。具体怎么快速查看可以参考这篇文章 : <a href="https://blog.csdn.net/qq_34908107/article/details/78421212" target="_blank" rel="noopener">https://blog.csdn.net/qq_34908107/article/details/78421212</a></p>
+</blockquote>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    VirtualApk插件Activity的启动
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">Replugin进程间的同步</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

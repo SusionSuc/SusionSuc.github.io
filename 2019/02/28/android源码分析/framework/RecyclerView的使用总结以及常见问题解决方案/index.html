@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>RecyclerView的使用总结以及常见问题解决方案 | susion</title>
+    
+    
+        <meta name="keywords" content="RecyclerView的使用总结以及常见问题解决方案" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="本文是RecyclerView源码分析系列最后一篇文章, 主要讲一下我个人对于RecycleView的使用的一些思考以及一些常见的问题怎么解决。先来看一下使用RecycleView时常见的问题以及一些需求。  RecyclerView使用常见的问题和需求RecycleView设置了数据不显示这个往往是因为你没有设置LayoutManger。 没有LayoutManger的话RecycleView">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RecyclerView的使用总结以及常见问题解决方案">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="本文是RecyclerView源码分析系列最后一篇文章, 主要讲一下我个人对于RecycleView的使用的一些思考以及一些常见的问题怎么解决。先来看一下使用RecycleView时常见的问题以及一些需求。  RecyclerView使用常见的问题和需求RecycleView设置了数据不显示这个往往是因为你没有设置LayoutManger。 没有LayoutManger的话RecycleView">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/picture/smoothScroll20.gif">
+<meta property="og:image" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/picture/RecyclerView%E4%B8%ADItem%E9%AB%98%E5%BA%A6%E5%90%84%E4%B8%8D%E7%9B%B8%E5%90%8C.png">
+<meta property="article:published_time" content="2019-02-28T03:09:02.656Z">
+<meta property="article:modified_time" content="2020-01-20T11:40:26.482Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/picture/smoothScroll20.gif">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/framework/RecyclerView的使用总结以及常见问题解决方案" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/">framework</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">
+            <time datetime="2019-02-28T03:09:02.656Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            RecyclerView的使用总结以及常见问题解决方案
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <blockquote>
+<p>本文是<code>RecyclerView源码分析系列最后一篇文章</code>, 主要讲一下我个人对于<code>RecycleView</code>的使用的一些思考以及一些常见的问题怎么解决。先来看一下使用<code>RecycleView</code>时常见的问题以及一些需求。</p>
+</blockquote>
+<h1 id="RecyclerView使用常见的问题和需求"><a href="#RecyclerView使用常见的问题和需求" class="headerlink" title="RecyclerView使用常见的问题和需求"></a>RecyclerView使用常见的问题和需求</h1><h2 id="RecycleView设置了数据不显示"><a href="#RecycleView设置了数据不显示" class="headerlink" title="RecycleView设置了数据不显示"></a>RecycleView设置了数据不显示</h2><p>这个往往是因为你没有设置<code>LayoutManger</code>。 没有<code>LayoutManger</code>的话<code>RecycleView</code>是无法布局的，即是无法展示数据,下面是<code>RecycleView</code>布局的源码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">void dispatchLayout() &#123;  &#x2F;&#x2F;没有设置 Adapter 和 LayoutManager， 都不可能有内容</span><br><span class="line">    if (mAdapter &#x3D;&#x3D; null) &#123;</span><br><span class="line">            Log.e(TAG, &quot;No adapter attached; skipping layout&quot;);</span><br><span class="line">            &#x2F;&#x2F; leave the state in START</span><br><span class="line">            return;</span><br><span class="line">    &#125;</span><br><span class="line">    if (mLayout &#x3D;&#x3D; null) &#123;</span><br><span class="line">            Log.e(TAG, &quot;No layout manager attached; skipping layout&quot;);</span><br><span class="line">            &#x2F;&#x2F; leave the state in START</span><br><span class="line">            return;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即<code>Adapter</code>或<code>Layout</code>任意一个为null,就不会执行布局操作。</p>
+<h2 id="RecyclerView数据多次滚动后出现混乱"><a href="#RecyclerView数据多次滚动后出现混乱" class="headerlink" title="RecyclerView数据多次滚动后出现混乱"></a>RecyclerView数据多次滚动后出现混乱</h2><p><code>RecycleView</code>在滚动过程中<code>ViewHolder</code>是会不断复用的，因此就会带着上一次展示的UI信息(也包含滚动状态), 所以在设置一个<code>ViewHolder</code>的UI时，尽量要做<code>resetUi()</code>操作:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) &#123;</span><br><span class="line">        holder.itemView.resetUi()</span><br><span class="line">        ...设置信息UI </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>resetUi()</code>这个方法就是用来把Ui还原为最初的操作。当然如果你的每一次<code>bindData</code>操作会对每一个UI对象重新赋值的话就不需要有这个操作。就不会出现<code>itemView</code>的UI混乱问题。 </p>
+<h2 id="如何获取当前-ItemView展示的位置"><a href="#如何获取当前-ItemView展示的位置" class="headerlink" title="如何获取当前 ItemView展示的位置"></a>如何获取当前 ItemView展示的位置</h2><p>我们可能会有这样的需求: 当<code>RecycleView</code>中的特定<code>Item</code>滚动到某个位置时做一些操作。比如某个<code>Item</code>滚动到顶部时，展示搜索框。那怎么实现呢？</p>
+<p>首先要获取的Item肯定处于数据源的某个位置并且肯定要展示在屏幕。因此我们可以直接获取这个<code>Item</code>的<code>ViewHolder</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">val holder &#x3D; recyclerView.findViewHolderForAdapterPosition(speicalItemPos) ?: return</span><br><span class="line"></span><br><span class="line">val offsetWithScreenTop &#x3D; holder.itemview.top</span><br><span class="line"></span><br><span class="line">if(offsetWithScreenTop &lt;&#x3D; 0)&#123;  &#x2F;&#x2F;这个ItemView已经滚动到屏幕顶部</span><br><span class="line">    &#x2F;&#x2F;do something</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="如何在固定时间内滚动一款距离"><a href="#如何在固定时间内滚动一款距离" class="headerlink" title="如何在固定时间内滚动一款距离"></a>如何在固定时间内滚动一款距离</h2><p><code>smoothScrollToPosition()</code>大家应该都用过，如果滚动2、3个Item。那么整体的用户体验还是非常棒的。</p>
+<p>但是，如果你滚动20个Item，那这个体验可能就会就很差了，因为用户看到的可能是下面这样子:</p>
+<p><img src="picture/smoothScroll20.gif" alt=""></p>
+<p>恩，滚动的时间有点长。因此对于这种case其实我推荐直接使用<code>scrollToPosition(20)</code>，效果要比这个好。 可是如果你就是想在<code>200ms</code>内从<code>Item 1</code>滚到<code>Item 20</code>怎么办呢？</p>
+<p>可以参考<a href="https://stackoverflow.com/questions/28803319/android-control-smooth-scroll-over-recycler-view/28853254" target="_blank" rel="noopener">StackOverflow上的一个答案</a>。大致写法是这样的:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;自定义 LayoutManager， Hook smoothScrollToPosition 方法</span><br><span class="line">recyclerView.layoutManager &#x3D; object : LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false) &#123;</span><br><span class="line">    override fun smoothScrollToPosition(recyclerView: RecyclerView?, state: RecyclerView.State?, position: Int) &#123;</span><br><span class="line">        if (recyclerView &#x3D;&#x3D; null) return</span><br><span class="line">        val scroller &#x3D; get200MsScroller(recyclerView.context, position * 500)</span><br><span class="line">        scroller.targetPosition &#x3D; position</span><br><span class="line">        startSmoothScroll(scroller)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">private fun get200MsScroller(context: Context, distance: Int): RecyclerView.SmoothScroller &#x3D; object : LinearSmoothScroller(context) &#123;</span><br><span class="line">    override fun calculateSpeedPerPixel(displayMetrics: DisplayMetrics): Float &#123;</span><br><span class="line">        return (200.0f &#x2F; distance) &#x2F;&#x2F;表示滚动 distance 花费200ms</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>比如上面我把时间改为<code>10000</code>,那么就是用10s的时间完成这个滚动操作。</p>
+<h2 id="如何测量当前RecyclerView的高度"><a href="#如何测量当前RecyclerView的高度" class="headerlink" title="如何测量当前RecyclerView的高度"></a>如何测量当前RecyclerView的高度</h2><p>先描述一下这个需求: <code>RecyclerView</code>中的每个<code>ItemView</code>的高度都是不固定的。我数据源中有20条数据，在没有渲染的情况下我想知道这个20条数据被<code>RecycleView</code>渲染后的总共高度, 比如下面这个图片:</p>
+<p><img src="picture/RecyclerView%E4%B8%ADItem%E9%AB%98%E5%BA%A6%E5%90%84%E4%B8%8D%E7%9B%B8%E5%90%8C.png" alt=""></p>
+<p>怎么做呢？我的思路是利用<code>LayoutManager</code>来测量，因为<code>RecycleView</code>在对<code>子View</code>进行布局时就是用<code>LayoutManager</code>来测量<code>子View</code>来计算还有多少剩余空间可用，源码如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void layoutChunk(RecyclerView.Recycler recycler, RecyclerView.State state,LayoutState layoutState, LayoutChunkResult result) &#123;</span><br><span class="line">     View view &#x3D; layoutState.next(recycler);   &#x2F;&#x2F;这个方法会向 recycler要一个View</span><br><span class="line">     ...</span><br><span class="line">     measureChildWithMargins(view, 0, 0);  &#x2F;&#x2F;测量这个View的尺寸，方便布局, 这个方法是public</span><br><span class="line">     ...</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以我们也可以利用<code>layoutManager.measureChildWithMargins</code>方法来测量，代码如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">private fun measureAllItemHeight():Int &#123;</span><br><span class="line">    val measureTemplateView &#x3D; SimpleStringView(this)</span><br><span class="line">    var totalItemHeight &#x3D;</span><br><span class="line">    dataSource.forEach &#123;  &#x2F;&#x2F;dataSource当前中的所有数据</span><br><span class="line">        measureTemplateView.bindData(it, 0) &#x2F;&#x2F;设置好UI数据</span><br><span class="line">        recyclerView.layoutManager.measureChild(measureTemplateView, 0, 0) &#x2F;&#x2F;调用源码中的子View的测量方法</span><br><span class="line">        currentHeight +&#x3D; measureTemplateView.measuredHeight</span><br><span class="line">    &#125;</span><br><span class="line">    return totalItemHeight</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>但要注意的是，这个方法要等布局稳定的时候才可以用，如果你在<code>Activity.onCreate</code>中调用，那么应该<code>post</code>一下</strong>， 即:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">recyclerView.post&#123;</span><br><span class="line">    val totalHeight &#x3D; measureAllItemHeight()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="异常-IndexOutOfBoundsException-Inconsistency-detected-Invalid-item-position-5-offset-5-state-9"><a href="#异常-IndexOutOfBoundsException-Inconsistency-detected-Invalid-item-position-5-offset-5-state-9" class="headerlink" title="异常:IndexOutOfBoundsException: Inconsistency detected. Invalid item position 5(offset:5).state:9"></a>异常:IndexOutOfBoundsException: Inconsistency detected. Invalid item position 5(offset:5).state:9</h2><p>这个异常通常是由于<code>Adapter的数据源大小</code>改变没有及时通知<code>RecycleView</code>做UI刷新导致的，或者通知的方式有问题。 比如如果数据源变化了(比如数量变少了),而没有调用<code>notifyXXX</code>, 那么此时滚动<code>RecycleView</code>就会产生这个异常。</p>
+<p>解决办法很简单 : <strong><code>Adapter的数据源</code>改变时应立即调用<code>adapter.notifyXXX</code>来刷新<code>RecycleView</code></strong> 。</p>
+<p>分析一下这个异常为什么会产生:</p>
+<p>在<code>RecycleView刷新机制</code>一文介绍过，<code>RecycleView</code>的滚动操作是不会走<code>RecycleView</code>的正常布局过程的，它直接根据滚动的距离来摆放<code>新的子View</code>。 想象一下这种场景，原来数据源集合中<br>有8个Item，然后删除了4个后没有调用<code>adapter.notifyXXX()</code>，这时直接滚动<code>RecycleView</code>，比如滚动将要出现的是第6个Item，<code>LinearLayoutManager</code>就会向<code>Recycler</code>要第6个Item的View:</p>
+<blockquote>
+<p><code>Recycler.tryGetViewHolderForPositionByDeadline()</code>:</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">final int offsetPosition &#x3D; mAdapterHelper.findPositionOffset(position);  &#x2F;&#x2F;position是6 </span><br><span class="line">if (offsetPosition &lt; 0 || offsetPosition &gt;&#x3D; mAdapter.getItemCount()) &#123;    &#x2F;&#x2F;但此时  mAdapter.getItemCount() &#x3D; 5</span><br><span class="line">        throw new IndexOutOfBoundsException(&quot;Inconsistency detected. Invalid item &quot;</span><br><span class="line">                + &quot;position &quot; + position + &quot;(offset:&quot; + offsetPosition + &quot;).&quot;</span><br><span class="line">                + &quot;state:&quot; + mState.getItemCount() + exceptionLabel());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即这时就会抛出异常。如果调用了<code>adapter.notifyXXX</code>的话，<code>RecycleView</code>就会进行一次完全的布局操作，就不会有这个异常的产生。</p>
+<p>其实还有很多异常和这个原因差不多，比如:<code>IllegalArgumentException: Scrapped or attached views may not be recycled. isScrap:false</code>(很多情况也是由于没有及时同步UI和数据)</p>
+<p>所以在使用<code>RecycleView</code>时一定要注意保证<strong>数据和UI的同步，数据变化，及时刷新RecyclerView</strong>, 这样就能避免很多crash。</p>
+<h1 id="如何对RecyclerView进行封装"><a href="#如何对RecyclerView进行封装" class="headerlink" title="如何对RecyclerView进行封装"></a>如何对RecyclerView进行封装</h1><p>现在很多app都会使用<code>RecyclerView</code>来构建一个页面，这个页面中有各种卡片类型。为了支持快速开发我们通常会对<code>RecycleView</code>的<code>Adapter</code>做一层封装来方便我们写各种类型的卡片,下面这种封装是我认为一种比较好的封装:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * 对 RecyclerView.Adapter 的封装。方便业务书写。 业务只需要处理 (UI Bean) -&gt; (UI View) 的映射逻辑即可</span><br><span class="line"> *&#x2F;</span><br><span class="line">abstract class CommonRvAdapter&lt;T&gt;(private val dataSource: List&lt;T&gt;) : RecyclerView.Adapter&lt;RecyclerView.ViewHolder&gt;() &#123;</span><br><span class="line"></span><br><span class="line">    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder &#123;</span><br><span class="line">        val item &#x3D; createItem(viewType)</span><br><span class="line">        return CommonViewHolder(parent.context, parent, item)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) &#123;</span><br><span class="line">        val commonViewHolder &#x3D; holder as CommonViewHolder&lt;T&gt;</span><br><span class="line">        commonViewHolder.adapterItemView.bindData(dataSource[position], position)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override fun getItemCount() &#x3D; dataSource.size</span><br><span class="line"></span><br><span class="line">    override fun getItemViewType(position: Int): Int &#123;</span><br><span class="line">        return getItemType(dataSource[position])</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @param viewType 需要创建的ItemView的viewType, 由 &#123;@link getItemType(item: T)&#125; 根据数据产生</span><br><span class="line">     * @return 返回这个 viewType 对应的 AdapterItemView</span><br><span class="line">     * *&#x2F;</span><br><span class="line">    abstract fun createItem(viewType: Int): AdapterItemView&lt;T&gt;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * @param T 代表dataSource中的一个data</span><br><span class="line">     *</span><br><span class="line">     * @return 返回 显示 T 类型的data的 ItemView的 类型</span><br><span class="line">     * *&#x2F;</span><br><span class="line">    abstract fun getItemType(item: T): Int</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * Wrapper 的ViewHolder。 业务不必理会RecyclerView的ViewHolder</span><br><span class="line">     * *&#x2F;</span><br><span class="line">    private class CommonViewHolder&lt;T&gt;(context: Context?, parent: ViewGroup, val adapterItemView: AdapterItemView&lt;T&gt;)</span><br><span class="line">    &#x2F;&#x2F;这一点做了特殊处理，如果业务的AdapterItemView本身就是一个View，那么直接当做ViewHolder的itemView。 否则inflate出一个view来当做ViewHolder的itemView</span><br><span class="line">        : RecyclerView.ViewHolder(if (adapterItemView is View) adapterItemView else LayoutInflater.from(context).inflate(adapterItemView.getLayoutResId(), parent, false)) &#123;</span><br><span class="line">        init &#123;</span><br><span class="line">            adapterItemView.initViews(itemView)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * 能被 CommonRvAdapter 识别的一个 ItemView 。 业务写一个RecyclerView中的ItemView，只需要实现这个接口即可。</span><br><span class="line"> * *&#x2F;</span><br><span class="line">interface AdapterItemView&lt;T&gt; &#123;</span><br><span class="line"></span><br><span class="line">    fun getLayoutResId(): Int</span><br><span class="line"></span><br><span class="line">    fun initViews(var1: View)</span><br><span class="line"></span><br><span class="line">    fun bindData(data: T, post: Int)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为什么我认为这是一个不错的封装?</p>
+<h2 id="业务如果写一个新的Adapter的话只需要实现两个方法"><a href="#业务如果写一个新的Adapter的话只需要实现两个方法" class="headerlink" title="业务如果写一个新的Adapter的话只需要实现两个方法:"></a>业务如果写一个新的Adapter的话只需要实现两个方法:</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">abstract fun createItem(viewType: Int): AdapterItemView&lt;T&gt;</span><br><span class="line"></span><br><span class="line">abstract fun getItemType(item: T): Int</span><br></pre></td></tr></table></figure>
+
+<p>即业务写一个<code>Adapter</code>只需要对 <strong>UI 数据</strong> -&gt; <strong>UI View</strong> 做映射即可, 不需要关心<code>RecycleView.ViewHolder</code>的逻辑。</p>
+<h2 id="因为抽象了AdapterItemView-ItemView足够灵活"><a href="#因为抽象了AdapterItemView-ItemView足够灵活" class="headerlink" title="因为抽象了AdapterItemView, ItemView足够灵活"></a>因为抽象了<code>AdapterItemView</code>, ItemView足够灵活</h2><p>由于封装了<code>RecycleView.ViewHolder</code>的逻辑，因此对于<code>UI item view</code>业务方只需要返回一个实现了<code>AdapterItemView</code>的对象即可。可以是一个<code>View</code>,也可以不是一个<code>View</code>, 这是因为<code>CommonViewHolder</code>在构造的时候对它做了兼容:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">val view : View &#x3D; if (adapterItemView is View) adapterItemView else LayoutInflater.from(context).inflate(adapterItemView.getLayoutResId(), parent, false)</span><br></pre></td></tr></table></figure>
+
+<p>即如果实现了<code>AdapterItemView</code>的对象本身就是一个<code>View</code>,那么直接把它当做<code>ViewHolder</code>的<code>itemview</code>,否则就<code>inflate</code>出一个<code>View</code>作为<code>ViewHolder</code>的<code>itemview</code>。</p>
+<p>其实这里我比较推荐实现<code>AdapterItemView</code>的同时直接实现一个<code>View</code>,即不要把<code>inflate</code>的工作交给底层框架。比如这样:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">private class SimpleStringView(context: Context) : FrameLayout(context), AdapterItemView&lt;String&gt; &#123;</span><br><span class="line"></span><br><span class="line">    init &#123;</span><br><span class="line">        LayoutInflater.from(context).inflate(getLayoutResId, this)  &#x2F;&#x2F;自己去负责inflate工作</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    override fun getLayoutResId() &#x3D; R.layout.view_test</span><br><span class="line"></span><br><span class="line">    override fun initViews(var1: View) &#123;&#125;</span><br><span class="line"></span><br><span class="line">    override fun bindData(data: String, post: Int) &#123; simpleTextView.text &#x3D; data &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为什么呢？原因有两点 :</p>
+<ol>
+<li>继承自一个View可复用性很高，封装性很高。即这个<code>SimpleStringView</code>不仅可以在<code>RecycleView</code>中当一个<code>itemView</code>,也可以在任何地方使用。</li>
+<li>方便单元测试，直接new这个View就好了。</li>
+</ol>
+<p>但其实直接继承自一个<code>View</code>是有坑的，即上面那行inflate代码<code>LayoutInflater.from(context).inflate(getLayoutResId, this)</code></p>
+<p>它其实是把<code>xml</code>文件inflate成一个<code>View</code>。然后add到你<code>ViewGroup</code>中。因为<code>SimpleStringView</code>就是一个<code>FrameLayout</code>，所有相当于add到这个<code>FrameLayout</code>中。这其实就有问题了。比如你的布局文件是下面这种:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;FrameLayout&gt;</span><br><span class="line">.....</span><br><span class="line">&lt;&#x2F;FrameLayout&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>这就相当于你可能多加了一层无用的父View</strong></p>
+<p>所有如果是直接继承自一个View的话，我推荐这样写:</p>
+<ol>
+<li>布局文件中尽可能使用<code>&lt;merge&gt;</code>标签来消除这层无用的父View, 即上面的<code>&lt;FrameLayout&gt;</code>改为<code>&lt;merge&gt;</code></li>
+<li>很简单的布局的可以直接在代码中写，不要inflate。这样其实也可以减少inflate的耗时，稍微提高了一点性能吧。</li>
+</ol>
+<p>当然，如果你不需要对这个View做复用的话你可以不用直接继承自<code>View</code>,只实现<code>AdapterItemView</code>接口, inflate的工作交给底层框架即可。这样是不会产生上面这个问题的。</p>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    从源码理解BroadcastReceiver的工作过程
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">RecyclerView的基本设计结构</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

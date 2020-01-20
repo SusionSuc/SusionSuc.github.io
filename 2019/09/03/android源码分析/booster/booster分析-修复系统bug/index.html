@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>修复系统bug | susion</title>
+    
+    
+        <meta name="keywords" content="修复系统bug" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="Booster是一款专门为移动应用设计的易用、轻量级且可扩展的质量优化框架，其目标主要是为了解决随着 APP 复杂度的提升而带来的性能、稳定性、包体积等一系列质量问题。它提供了性能检测、多线程优化、资源索引内联、资源去冗余、资源压缩、系统 Bug 修复等一系列功能模块，可以使得稳定性能够提升 15% ~ 25%，包体积可以减小 1MB ~ 10MB。  本文就分析一下booster是如何实现系统b">
+<meta property="og:type" content="article">
+<meta property="og:title" content="修复系统bug">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="Booster是一款专门为移动应用设计的易用、轻量级且可扩展的质量优化框架，其目标主要是为了解决随着 APP 复杂度的提升而带来的性能、稳定性、包体积等一系列质量问题。它提供了性能检测、多线程优化、资源索引内联、资源去冗余、资源压缩、系统 Bug 修复等一系列功能模块，可以使得稳定性能够提升 15% ~ 25%，包体积可以减小 1MB ~ 10MB。  本文就分析一下booster是如何实现系统b">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2019-09-03T11:58:59.006Z">
+<meta property="article:modified_time" content="2020-01-20T07:31:15.003Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file active"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/booster/booster分析-修复系统bug" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/">booster</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">
+            <time datetime="2019-09-03T11:58:59.006Z" itemprop="datePublished">2019-09-03</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            修复系统bug
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <p><a href="https://github.com/didi/booster" target="_blank" rel="noopener">Booster</a>是一款专门为移动应用设计的易用、轻量级且可扩展的质量优化框架，其目标主要是为了解决随着 APP 复杂度的提升而带来的性能、稳定性、包体积等一系列质量问题。它提供了性能检测、多线程优化、资源索引内联、资源去冗余、资源压缩、系统 Bug 修复等一系列功能模块，可以使得稳定性能够提升 15% ~ 25%，包体积可以减小 1MB ~ 10MB。</p>
+<blockquote>
+<p>本文就分析一下<code>booster</code>是如何实现<strong>系统bug修复</strong>功能的。</p>
+</blockquote>
+<h1 id="booster-transform-activity-thread"><a href="#booster-transform-activity-thread" class="headerlink" title="booster-transform-activity-thread"></a>booster-transform-activity-thread</h1><p><strong>这个组件可以处理系统Crash</strong></p>
+<h2 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h2><p><code>booster</code>hook了<code>ActivityThread.mH.mCallback</code>:</p>
+<blockquote>
+<p>ActivityThreadHooker.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">public static void hook() &#123;</span><br><span class="line">    try &#123;</span><br><span class="line">        final Handler handler &#x3D; getHandler(thread); &#x2F;&#x2F;通过反射获取到了ActivityThread.mH</span><br><span class="line">        if (null &#x3D;&#x3D; handler || !(hooked &#x3D; setFieldValue(handler, &quot;mCallback&quot;, new ActivityThreadCallback(handler)))) &#123;</span><br><span class="line">            Log.i(TAG, &quot;Hook ActivityThread.mH.mCallback failed&quot;);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; catch (final Throwable t) &#123;</span><br><span class="line">        Log.w(TAG, &quot;Hook ActivityThread.mH.mCallback failed&quot;, t);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即上面用<code>ActivityThreadCallback</code>代理<code>ActivityThread.mH.mCallback</code>。它做了以下处理:</p>
+<blockquote>
+<p>ActivityThreadCallback.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">private final Handler mHandler; &#x2F;&#x2F;代理的 Handler</span><br><span class="line"></span><br><span class="line">@Override</span><br><span class="line">public final boolean handleMessage(final Message msg) &#123;</span><br><span class="line">    try &#123;</span><br><span class="line">        this.mHandler.handleMessage(msg);</span><br><span class="line">    &#125; catch (final NullPointerException e) &#123;</span><br><span class="line">        if (hasStackTraceElement(e, ASSET_MANAGER_GET_RESOURCE_VALUE, LOADED_APK_GET_ASSETS)) &#123;&#x2F;&#x2F;没有栈信息，直接杀掉应用</span><br><span class="line">            abort(e);</span><br><span class="line">        &#125;</span><br><span class="line">        rethrowIfNotCausedBySystem(e);  &#x2F;&#x2F;如果不是系统异常就抛出去</span><br><span class="line">    &#125; catch (final SecurityException</span><br><span class="line">            | IllegalArgumentException</span><br><span class="line">            | AndroidRuntimeException</span><br><span class="line">            | WindowManager.BadTokenException e) &#123;</span><br><span class="line">        rethrowIfNotCausedBySystem(e);</span><br><span class="line">    &#125; catch (final Resources.NotFoundException e) &#123;</span><br><span class="line">        rethrowIfNotCausedBySystem(e);</span><br><span class="line">        abort(e);</span><br><span class="line">    &#125; catch (final RuntimeException e) &#123;</span><br><span class="line">        final Throwable cause &#x3D; e.getCause();</span><br><span class="line">        if (((Build.VERSION.SDK_INT &gt;&#x3D; Build.VERSION_CODES.N) &amp;&amp; isCausedBy(cause, DeadSystemException.class))</span><br><span class="line">                || (isCausedBy(cause, NullPointerException.class) &amp;&amp; hasStackTraceElement(e, LOADED_APK_GET_ASSETS))) &#123;</span><br><span class="line">            abort(e);</span><br><span class="line">        &#125;</span><br><span class="line">        rethrowIfNotCausedBySystem(e);</span><br><span class="line">    &#125; catch (final Error e) &#123;</span><br><span class="line">        rethrowIfNotCausedBySystem(e);</span><br><span class="line">        abort(e);</span><br><span class="line">    &#125;</span><br><span class="line">    return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即<strong>如果<code>mHandler.handleMessage()</code>发生了异常并且是系统异常的话就catch住</strong></p>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><h3 id="catch哪些系统异常呢？"><a href="#catch哪些系统异常呢？" class="headerlink" title="catch哪些系统异常呢？"></a>catch哪些系统异常呢？</h3><p><code>booster</code>会检查异常堆栈，如果是以系统包名打头就认为是系统异常:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">private static final String[] SYSTEM_PACKAGE_PREFIXES &#x3D; &#123;</span><br><span class="line">        &quot;java.&quot;,</span><br><span class="line">        &quot;android.&quot;,</span><br><span class="line">        &quot;androidx.&quot;,</span><br><span class="line">        &quot;dalvik.&quot;,</span><br><span class="line">        &quot;com.android.&quot;,</span><br><span class="line">        ActivityThreadCallback.class.getPackage().getName() + &quot;.&quot;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">private static boolean isSystemStackTrace(final StackTraceElement element) &#123;</span><br><span class="line">    final String name &#x3D; element.getClassName();</span><br><span class="line">    for (final String prefix : SYSTEM_PACKAGE_PREFIXES) &#123;</span><br><span class="line">        if (name.startsWith(prefix)) &#123;</span><br><span class="line">            return true;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    return false;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="ActivityThread-Handler-handleMessage-是什么时候调用的呢？"><a href="#ActivityThread-Handler-handleMessage-是什么时候调用的呢？" class="headerlink" title="ActivityThread.Handler.handleMessage() 是什么时候调用的呢？"></a>ActivityThread.Handler.handleMessage() 是什么时候调用的呢？</h3><p>阅读<code>ActivityThread</code>源码可以看出<code>ActivityHread.mH</code>的类型是<code>ActivityThread.H</code>,它的<code>handleMessage</code>主要处理了下面这些事件:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">public static final int BIND_APPLICATION        &#x3D; 110;</span><br><span class="line">public static final int EXIT_APPLICATION        &#x3D; 111;</span><br><span class="line">public static final int SERVICE_ARGS            &#x3D; 115;</span><br><span class="line">public static final int RECEIVER                &#x3D; 113;</span><br><span class="line">public static final int CREATE_SERVICE          &#x3D; 114;</span><br><span class="line">public static final int BIND_SERVICE            &#x3D; 121;</span><br><span class="line">public static final int UNBIND_SERVICE          &#x3D; 122;</span><br><span class="line">public static final int RELAUNCH_ACTIVITY &#x3D; 160;</span><br><span class="line">public static final int INSTALL_PROVIDER        &#x3D; 145;        </span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>即基本上就是系统通过<code>IPC</code>回调到我们应用的一些事件。</p>
+<h1 id="booster-transform-toast"><a href="#booster-transform-toast" class="headerlink" title="booster-transform-toast"></a>booster-transform-toast</h1><p><strong>这个组件修复了Toast在Android 7.1 上的 Bug</strong></p>
+<h2 id="Toast在Android-7-1-上的问题"><a href="#Toast在Android-7-1-上的问题" class="headerlink" title="Toast在Android 7.1 上的问题"></a>Toast在Android 7.1 上的问题</h2><p>具体原因分析可以看这篇文章: <a href="https://juejin.im/post/5b96134f5188255c352d3ed7" target="_blank" rel="noopener">Android7.1.1Toast崩溃解决方案</a></p>
+<p>简单的说就是<code>Android 7.1</code>上弹Toast的代码没有<code>try catch</code>。 解决办法也很简单，就是<code>try catch</code>住。 那<code>booster</code>是怎么做的呢?</p>
+<blockquote>
+<p>ShadowToast.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public class ShadowToast &#123;</span><br><span class="line"></span><br><span class="line">    &#x2F;**</span><br><span class="line">     * Fix &#123;@code WindowManager$BadTokenException&#125; for Android N</span><br><span class="line">     * @param toast The original toast</span><br><span class="line">     *&#x2F;</span><br><span class="line">    public static void show(final Toast toast) &#123;</span><br><span class="line">        if (Build.VERSION.SDK_INT &#x3D;&#x3D; 25) &#123;</span><br><span class="line">            workaround(toast).show(); </span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            toast.show();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面<code>workaround(toast).show()</code>的实现就是通过反射<code>try-catch</code>住了可能crash的代码。</p>
+<p>那<code>ShadowToast</code>怎么生效的呢？它其实是通过:</p>
+<p><strong>自定义<code>gradle transform</code>在编译期间把所有的<code>Taost.show()</code>变为了<code>ShadowToast.show()</code></strong>, 可以查看构建报告:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">*android&#x2F;widget&#x2F;Toast.show()V &#x3D;&gt; com&#x2F;didiglobal&#x2F;booster&#x2F;instrument&#x2F;ShadowToast.apply(Lcom&#x2F;didiglobal&#x2F;booster&#x2F;instrument&#x2F;ShadowToast;)V: com&#x2F;draggable&#x2F;library&#x2F;extension&#x2F;glide&#x2F;GlideHelper$downloadPicture$2.accept(Ljava&#x2F;io&#x2F;File;)V</span><br></pre></td></tr></table></figure>
+
+<h1 id="booster-transform-res-check"><a href="#booster-transform-res-check" class="headerlink" title="booster-transform-res-check"></a>booster-transform-res-check</h1><p><strong>这个组件修复了”检查覆盖安装导致的 Resources 和 Assets 未加载的 Bug”</strong></p>
+<p>对于这个bug我没有遇到过,我在网上简单的查找了一下也没有找到，不过看一看<code>booster</code>的解决方案吧:</p>
+<blockquote>
+<p>ResChecker</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">public class ResChecker &#123;</span><br><span class="line">    public static void checkRes(final Application app) &#123;</span><br><span class="line">        if (null &#x3D;&#x3D; app.getAssets() || null &#x3D;&#x3D; app.getResources()) &#123;</span><br><span class="line">            final int pid &#x3D; Process.myPid();</span><br><span class="line">            Process.killProcess(pid);</span><br><span class="line">            System.exit(10);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面这段代码 <code>ResChecker.checkRes()</code>会通过<code>gradle transform</code>动态插入到<code>Application</code>的<code>attachBaseContext()</code>和<code>onCreate()</code>中。</p>
+<p>即解决办法是: <strong>覆盖安装启动应用时在<code>Application.attachBaseContext/onCreate</code>中判断资源是否加载，如果没有加载的话直接kill掉应用</strong></p>
+<h1 id="booster-transform-media-player"><a href="#booster-transform-media-player" class="headerlink" title="booster-transform-media-player"></a>booster-transform-media-player</h1><p><strong>这个组件用来修复<code>MediaPlayer</code>的崩溃</strong></p>
+<p>解决方案也是类似于上面的组件，就是把崩溃的地方<code>try-catch</code>住,然后通过<code>gradle transform</code>动态替换掉代码中的<code>MediaPlayer</code>。具体<code>try-catch</code>的范围是:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">public final class ShadowMediaPlayer implements Constants &#123;</span><br><span class="line"></span><br><span class="line">    public static MediaPlayer newMediaPlayer() &#123;</span><br><span class="line">        return workaround(new MediaPlayer());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static MediaPlayer create(Context context, Uri uri) &#123;</span><br><span class="line">        return workaround(MediaPlayer.create(context, uri));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static MediaPlayer create(final Context context, final Uri uri, final SurfaceHolder holder) &#123;</span><br><span class="line">        return workaround(MediaPlayer.create(context, uri, holder));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static MediaPlayer create(final Context context, final Uri uri, final SurfaceHolder holder, final AudioAttributes audioAttributes, final int audioSessionId) &#123;</span><br><span class="line">        return workaround(MediaPlayer.create(context, uri, holder, audioAttributes, audioSessionId));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static MediaPlayer create(final Context context, final int resid) &#123;</span><br><span class="line">        return workaround(MediaPlayer.create(context, resid));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static MediaPlayer create(final Context context, final int resid, final AudioAttributes audioAttributes, final int audioSessionId) &#123;</span><br><span class="line">        return workaround(MediaPlayer.create(context, resid, audioAttributes, audioSessionId));</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="booster-transform-finalizer-watchdog-daemon"><a href="#booster-transform-finalizer-watchdog-daemon" class="headerlink" title="booster-transform-finalizer-watchdog-daemon"></a>booster-transform-finalizer-watchdog-daemon</h1><p><strong>这个组件用来修复<code>finalizer</code>导致的<code>TimeoutException</code></strong></p>
+<p>finalizer<code>导致的</code>TimeoutException : 简单的说就是对象的<code>finalize()</code>执行时间过长。对于具体的分析详见这篇文章:<a href="https://segmentfault.com/a/1190000019373275" target="_blank" rel="noopener">滴滴出行安卓端 finalize time out 的解决方案</a></p>
+<p>这篇文章最终给出了2个解决方案是:</p>
+<h2 id="手动停掉-FinalizerWatchdogDaemon-线程"><a href="#手动停掉-FinalizerWatchdogDaemon-线程" class="headerlink" title="手动停掉 FinalizerWatchdogDaemon 线程"></a>手动停掉 FinalizerWatchdogDaemon 线程</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">try &#123;</span><br><span class="line">    Class clazz &#x3D; Class.forName(&quot;java.lang.Daemons$FinalizerWatchdogDaemon&quot;);</span><br><span class="line">    Method method &#x3D; clazz.getSuperclass().getDeclaredMethod(&quot;stop&quot;);</span><br><span class="line">    method.setAccessible(true);</span><br><span class="line">    Field field &#x3D; clazz.getDeclaredField(&quot;INSTANCE&quot;);</span><br><span class="line">    field.setAccessible(true);</span><br><span class="line">    method.invoke(field.get(null));</span><br><span class="line">&#125; catch (Throwable e) &#123;</span><br><span class="line">    e.printStackTrace();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即通过反射停掉FinalizerWatchdogDaemon线程</p>
+<h2 id="try-cathch-住异常"><a href="#try-cathch-住异常" class="headerlink" title="try-cathch 住异常"></a>try-cathch 住异常</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">final Thread.UncaughtExceptionHandler defaultUncaughtExceptionHandler &#x3D; Thread.getDefaultUncaughtExceptionHandler();</span><br><span class="line">Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() &#123;</span><br><span class="line">    @Override</span><br><span class="line">    public void uncaughtException(Thread t, Throwable e) &#123;</span><br><span class="line">        if (t.getName().equals(&quot;FinalizerWatchdogDaemon&quot;) &amp;&amp; e instanceof TimeoutException) &#123;</span><br><span class="line">             &#x2F;&#x2F;ignore it</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            defaultUncaughtExceptionHandler.uncaughtException(t, e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h2 id="booster使用的方案"><a href="#booster使用的方案" class="headerlink" title="booster使用的方案"></a>booster使用的方案</h2><p><code>booster</code>采用的方案是<strong>手动停掉 FinalizerWatchdogDaemon线程</strong>, 具体实现也是通过<code>gradle transform</code>在<code>Application</code>创建的时候新开一个线程调用停掉<code>FinalizerWatchdogDaemon</code>线程的代码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">public class FinalizerWatchdogDaemonKiller &#123;</span><br><span class="line">    private static final int MAX_RETRY_TIMES &#x3D; 10;</span><br><span class="line">    private static final long THREAD_SLEEP_TIME &#x3D; 5000;</span><br><span class="line"></span><br><span class="line">    @SuppressWarnings(&quot;unchecked&quot;)</span><br><span class="line">    public static void kill() &#123;</span><br><span class="line">        new Thread(new Runnable() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void run() &#123;</span><br><span class="line">                for (int retry &#x3D; 0; isFinalizerWatchdogDaemonExists() &amp;&amp; retry &lt; MAX_RETRY_TIMES; retry++) &#123;</span><br><span class="line">                    try &#123;</span><br><span class="line">                        final Class clazz &#x3D; Class.forName(&quot;java.lang.Daemons$FinalizerWatchdogDaemon&quot;);</span><br><span class="line">                        final Field field &#x3D; clazz.getDeclaredField(&quot;INSTANCE&quot;);</span><br><span class="line">                        field.setAccessible(true);</span><br><span class="line">                        final Object watchdog &#x3D; field.get(null);</span><br><span class="line">                        try &#123;</span><br><span class="line">                            final Field thread &#x3D; clazz.getSuperclass().getDeclaredField(&quot;thread&quot;);</span><br><span class="line">                            thread.setAccessible(true);</span><br><span class="line">                            thread.set(watchdog, null);</span><br><span class="line">                        &#125; catch (final Throwable t) &#123;</span><br><span class="line">                            try &#123;</span><br><span class="line">                                final Method method &#x3D; clazz.getSuperclass().getDeclaredMethod(&quot;stop&quot;);</span><br><span class="line">                                method.setAccessible(true);</span><br><span class="line">                                method.invoke(watchdog);</span><br><span class="line">                        ....</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, &quot;FinalizerWatchdogDaemonKiller&quot;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="END"><a href="#END" class="headerlink" title="END"></a>END</h1><p>到这里<code>booster</code>修复系统bug的<code>feature</code>就简单的过了一遍，后面会继续分析<code>booster</code>框架的其他功能。</p>
+<p>更多文章见 : <a href="https://github.com/SusionSuc/AdvancedAndroid" target="_blank" rel="noopener">AdvancedAdnroid</a></p>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    线程优化&amp;性能检测
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">DraggableImageViewer</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

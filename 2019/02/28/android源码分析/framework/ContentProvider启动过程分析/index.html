@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>ContentProvider启动过程分析 | susion</title>
+    
+    
+        <meta name="keywords" content="ContentProvider启动过程分析" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="前面阅读了BroadcastReceiver的源码。这篇文章也应该是继续看VirtualApk中关于插件ContentProvider的处理的。不过由于处理逻辑类似于Activity、Service,所以到最后再看。本文的目的是了解系统对于ContentProvider的整个处理的过程。  ContentProvider是一个可以跨进程的组件,比如我们可以使用通讯录的ContentProvide">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ContentProvider启动过程分析">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="前面阅读了BroadcastReceiver的源码。这篇文章也应该是继续看VirtualApk中关于插件ContentProvider的处理的。不过由于处理逻辑类似于Activity、Service,所以到最后再看。本文的目的是了解系统对于ContentProvider的整个处理的过程。  ContentProvider是一个可以跨进程的组件,比如我们可以使用通讯录的ContentProvide">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ActivityManagerService%E5%AF%B9%E4%BA%8EContentProvider%E5%90%AF%E5%8A%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E5%A4%84%E7%90%86.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AE%89%E8%A3%85ContentProvider.png">
+<meta property="article:published_time" content="2019-02-28T03:09:02.650Z">
+<meta property="article:modified_time" content="2020-01-20T11:37:35.277Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ActivityManagerService%E5%AF%B9%E4%BA%8EContentProvider%E5%90%AF%E5%8A%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E5%A4%84%E7%90%86.png">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/framework/ContentProvider启动过程分析" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/">framework</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">
+            <time datetime="2019-02-28T03:09:02.650Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            ContentProvider启动过程分析
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <blockquote>
+<p>前面阅读了<a href="https://github.com/SusionSuc/AdvancedAndroid/blob/master/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk/%E4%BB%8E%E6%BA%90%E7%A0%81%E4%BA%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B.md" target="_blank" rel="noopener">BroadcastReceiver的源码</a>。<br>这篇文章也应该是继续看<code>VirtualApk</code>中关于<code>插件ContentProvider</code>的处理的。不过由于处理逻辑类似于Activity、Service,所以到最后再看。本文的目的是了解系统对于<code>ContentProvider</code>的整个处理的过程。</p>
+</blockquote>
+<p><code>ContentProvider</code>是一个可以跨进程的组件,比如我们可以使用通讯录的<code>ContentProvider</code>来获取手机中的通信录信息。<code>ContentResolver</code>封装了<code>ContentProvider</code>跨进程通信的逻辑，使我们在使用<code>ContentProvider</code>时不需要关心这些细节。</p>
+<p>那我们在使用<code>context.getContentResolver().query(uri)</code>时发生了什么呢？我们的进程是如何使用其他进程的ContentProvider的呢？<br>接下来我们就来分析Android系统源码对于<code>ContentProvider</code>的处理，来弄明白这些问题。</p>
+<h1 id="ContentProvider的实例化过程"><a href="#ContentProvider的实例化过程" class="headerlink" title="ContentProvider的实例化过程"></a>ContentProvider的实例化过程</h1><p>我们从<code>ContextImp.getContentResolver().query()</code>开始看:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">public final Cursor query(...) &#123;</span><br><span class="line">    IContentProvider unstableProvider &#x3D; acquireUnstableProvider(uri); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即首先要获得一个<code>IContentProvider</code>。它是ContentProvider可以跨进交互的一个<code>aidl</code>接口。其实这里拿到的就是一个<code>Binder</code>。所以接下来就看这个<code>IContentProvider(Binder)</code>是如果获取的。</p>
+<p>我们在调用<code>ContextImp.getContentResolver()</code>获得的其实是<code>ApplicationContentResolver</code>。因此来看一下它的<code>acquireUnstableProvider()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">protected IContentProvider acquireProvider(Context context, String auth) &#123;</span><br><span class="line">    return mMainThread.acquireProvider(context,</span><br><span class="line">                ContentProvider.getAuthorityWithoutUserId(auth),</span><br><span class="line">                resolveUserIdFromAuthority(auth), true);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>继续看源码, 切换到主线程<code>ActivityThread.java</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">public final IContentProvider acquireProvider(Context c, String auth, int userId, boolean stable) &#123;</span><br><span class="line">    &#x2F;&#x2F; 如果已经缓存过这个 auth对应的IContentProvider，则直接返回</span><br><span class="line">    final IContentProvider provider &#x3D; acquireExistingProvider(c, auth, userId, stable);</span><br><span class="line">    if (provider !&#x3D; null) return provider;</span><br><span class="line"></span><br><span class="line">    ContentProviderHolder holder &#x3D; null;</span><br><span class="line">    </span><br><span class="line">    holder &#x3D; ActivityManager.getService().getContentProvider(</span><br><span class="line">                    getApplicationThread(), auth, userId, stable);</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;获取失败</span><br><span class="line">    if (holder &#x3D;&#x3D; null) return null;</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;在向服务端获取holder，服务端如果发现ContentProvider的进程和当前客户端进程是同一个进程就会让客户端进程来实例化ContentProvider，具体细节可以在下面分析中看到</span><br><span class="line">    holder &#x3D; installProvider(c, holder, holder.info, true &#x2F;*noisy*&#x2F;, holder.noReleaseNeeded, stable);</span><br><span class="line"></span><br><span class="line">    return holder.provider;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即在本地没有获得过<code>IContentProvider</code>时，直接向<code>ActivityManagerService</code>发起<code>getContentProvider</code>的请求,最终调用<code>ActivityManagerService.getContentProviderImpl()</code>, 这个方法就是<code>ContentProvider</code>实例化逻辑的核心了:</p>
+<p>首先来看一下这个方法的声明:</p>
+<p><code>ContentProviderHolder getContentProviderImpl(IApplicationThread caller,String name, IBinder token, boolean stable, int userId)</code></p>
+<p>即最终是返回一个<code>ContentProviderHolder</code>,它是什么呢？它其实是一个可以在进程间传递的数据对象(aidl)，看一下它的定义:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public class ContentProviderHolder implements Parcelable &#123;</span><br><span class="line">    public final ProviderInfo info;</span><br><span class="line">    public IContentProvider provider;</span><br><span class="line">    public IBinder connection;</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+
+<p>继续看<code>getContentProviderImpl()</code>,这个方法比较长，所以接下来我们分段来看这个方法, 顺序是(1)、(2)、(3)… 这种 : </p>
+<blockquote>
+<p><code>ActivityManagerService.getContentProviderImpl()(1)</code></p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;三个关键对象</span><br><span class="line">ContentProviderRecord cpr;</span><br><span class="line">ContentProviderConnection conn &#x3D; null;</span><br><span class="line">ProviderInfo cpi &#x3D; null;</span><br><span class="line">...</span><br><span class="line">cpr &#x3D; mProviderMap.getProviderByName(name, userId); &#x2F;&#x2F; 看看系统是否已经缓存了这个ContentProvider</span><br></pre></td></tr></table></figure>
+
+<p>先来解释一下<code>ContentProviderRecord</code>、<code>ContentProviderConnection</code>、<code>ProviderInfo</code>、<code>mProviderMap</code>它们大概是什么:</p>
+<p><code>ContentProviderRecord</code>: 它是系统(ActivityManagerService)用来记录一个<code>ContentProvider</code>相关信息的对象。</p>
+<p><code>ContentProviderConnection</code>: 它是一个<code>Binder</code>。连接服务端(ActivityManagerService)和客户端(我们的app)。里面记录着一个<code>ContentProvider</code>的状态，比如是否已经死掉了等。</p>
+<p><code>ProviderInfo</code>: 用来保存一个<code>ContentProvider</code>的信息(manifest中的<code>&lt;provider&gt;</code>), 比如<code>authority</code>、<code>readPermission</code>等。</p>
+<p><code>mProviderMap</code>: 它的类型是<code>ProviderMap</code>。它里面存在几个map，这些map都是保存<code>ContentProvider</code>的信息的。</p>
+<p>ok我们继续来看源码:</p>
+<blockquote>
+<p><code>ActivityManagerService.getContentProviderImpl()(2)</code></p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">cpr &#x3D; mProviderMap.getProviderByName(name, userId); &#x2F;&#x2F; 看看系统是否已经缓存了这个ContentProvider</span><br><span class="line">boolean providerRunning &#x3D; cpr !&#x3D; null &amp;&amp; cpr.proc !&#x3D; null &amp;&amp; !cpr.proc.killed;</span><br><span class="line">if (providerRunning) &#123; </span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">if (!providerRunning) &#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即根据<code>ContentProvider</code>所在的<code>进程是否是活跃</code>、<code>这个ContentProvider是否被启动过(缓存下来)</code>两个状态来进行不同的处理 :</p>
+<h2 id="ContentProvider已被加载并且所在的进程正在运行"><a href="#ContentProvider已被加载并且所在的进程正在运行" class="headerlink" title="ContentProvider已被加载并且所在的进程正在运行"></a>ContentProvider已被加载并且所在的进程正在运行</h2><p>即: <code>if(providerRunning){ ... }</code>中的代码</p>
+<blockquote>
+<p><code>ActivityManagerService.getContentProviderImpl()(3)</code></p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">ProcessRecord r &#x3D; getRecordForAppLocked(caller); &#x2F;&#x2F;获取客户端(获得content provider的发起者)的进程信息</span><br><span class="line">if (r !&#x3D; null &amp;&amp; cpr.canRunHere(r)) &#123; &#x2F;&#x2F;如果请求的ContentProvider和客户端位于同一个进程</span><br><span class="line">    ContentProviderHolder holder &#x3D; cpr.newHolder(null); &#x2F;&#x2F;ContentProviderConnection参数传null</span><br><span class="line">    holder.provider &#x3D; null; &#x2F;&#x2F;注意，这里置空是让客户端自己去实例化！！</span><br><span class="line">    return holder;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;客户端进程正在运行，但是和ContentProvider并不在同一个进程</span><br><span class="line">conn &#x3D; incProviderCountLocked(r, cpr, token, stable); &#x2F;&#x2F; 直接根据 ContentProviderRecord和ProcessRecord 构造一个 ContentProviderConnection</span><br><span class="line"></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>即如果请求的是同进程的<code>ContentProvider</code>则直接回到进程的主线程去实例化<code>ContentProvider</code>。否则使用<code>ContentProviderRecord</code>和<code>ProcessRecord</code>构造一个<code>ContentProviderConnection</code></p>
+<h2 id="ContentProvider所在的进程没有运行并且服务端-ActivityManagerService-没有加载过它"><a href="#ContentProvider所在的进程没有运行并且服务端-ActivityManagerService-没有加载过它" class="headerlink" title="ContentProvider所在的进程没有运行并且服务端(ActivityManagerService)没有加载过它"></a>ContentProvider所在的进程没有运行并且服务端(ActivityManagerService)没有加载过它</h2><p>即: <code>if(!providerRunning){ ... }</code>中的代码</p>
+<blockquote>
+<p><code>ActivityManagerService.getContentProviderImpl()(4)</code></p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;先解析出来一个ProviderInfo</span><br><span class="line">cpi &#x3D; AppGlobals.getPackageManager().resolveContentProvider(name, STOCK_PM_FLAGS | PackageManager.GET_URI_PERMISSION_PATTERNS, userId);</span><br><span class="line">...</span><br><span class="line">ComponentName comp &#x3D; new ComponentName(cpi.packageName, cpi.name);</span><br><span class="line">cpr &#x3D; mProviderMap.getProviderByClass(comp, userId); &#x2F;&#x2F;这个content provider 没有被加载过</span><br><span class="line"></span><br><span class="line">final boolean firstClass &#x3D; cpr &#x3D;&#x3D; null;</span><br><span class="line">if (firstClass) &#123;</span><br><span class="line">    ...</span><br><span class="line">    cpr &#x3D; new ContentProviderRecord(this, cpi, ai, comp, singleton); &#x2F;&#x2F; 构造一个 ContentProviderRecord</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">final int N &#x3D; mLaunchingProviders.size(); &#x2F;&#x2F;  mLaunchingProviders它是用来缓存正在启动的 ContentProvider的集合的</span><br><span class="line">int i;</span><br><span class="line">for (i &#x3D; 0; i &lt; N; i++) &#123;</span><br><span class="line">    if (mLaunchingProviders.get(i) &#x3D;&#x3D; cpr) &#123;  &#x2F;&#x2F; 已经请求过一次了，provider正在启动，不重复走下面的逻辑</span><br><span class="line">        break;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;这个 ContentProvider 不是在启动状态，也就是还没启动</span><br><span class="line">if (i &gt;&#x3D; N) &#123;</span><br><span class="line">    ProcessRecord proc &#x3D; getProcessRecordLocked(cpi.processName, cpr.appInfo.uid, false);</span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">     if (proc !&#x3D; null &amp;&amp; proc.thread !&#x3D; null &amp;&amp; !proc.killed) &#123; &#x2F;&#x2F;content provider所在的进程已经启动</span><br><span class="line">        proc.thread.scheduleInstallProvider(cpi); &#x2F;&#x2F;安装这个 Provider , 即客户端实例化它</span><br><span class="line">      &#125; else &#123;</span><br><span class="line">        &#x2F;&#x2F;启动content provider 所在的进程, 并且唤起 content provider</span><br><span class="line">        proc &#x3D; startProcessLocked(cpi.processName,cpr.appInfo, false, 0, &quot;content provider&quot;,new ComponentName(cpi.applicationInfo.packageName,cpi.name)...);</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">    cpr.launchingApp &#x3D; proc;</span><br><span class="line">    mLaunchingProviders.add(cpr); &#x2F;&#x2F;添加到正在启动的队列</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;缓存 ContentProvider信息</span><br><span class="line">if (firstClass) &#123;</span><br><span class="line">    mProviderMap.putProviderByClass(comp, cpr);</span><br><span class="line">&#125;</span><br><span class="line">mProviderMap.putProviderByName(name, cpr);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;构造一个 ContentProviderConnection</span><br><span class="line">conn &#x3D; incProviderCountLocked(r, cpr, token, stable);</span><br><span class="line">if (conn !&#x3D; null) &#123;</span><br><span class="line">    conn.waiting &#x3D; true; &#x2F;&#x2F;设置这个connection</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="等待客户端实例化-ContentProvider"><a href="#等待客户端实例化-ContentProvider" class="headerlink" title="等待客户端实例化 ContentProvider"></a>等待客户端实例化 ContentProvider</h2><blockquote>
+<p><code>ActivityManagerService.getContentProviderImpl()</code>(5)</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; Wait for the provider to be published...</span><br><span class="line">synchronized (cpr) &#123;</span><br><span class="line">    while (cpr.provider &#x3D;&#x3D; null) &#123;</span><br><span class="line">        ....</span><br><span class="line">        if (conn !&#x3D; null) &#123;</span><br><span class="line">            conn.waiting &#x3D; true;</span><br><span class="line">        &#125;</span><br><span class="line">        cpr.wait();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">return cpr !&#x3D; null ? cpr.newHolder(conn) : null; &#x2F;&#x2F;返回给请求这个客户端的进程</span><br></pre></td></tr></table></figure>
+
+<p>根据前面的分析，ContentProvider所在的进程没有运行或者不是和<code>获取者</code>同一个进程，就创建了一个<code>ContentProviderConnection</code>,那么服务端就会挂起，启动ContentProvider所在的进程，并等待它实例化<code>ContentProvider</code> :</p>
+<p>在继续看客户端实例化ContentProvider之前，我们先用一张图来总结一下客户端进程请求服务端(<code>ActivityManagerService</code>)启动一个ContentProvider的逻辑 :</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ActivityManagerService%E5%AF%B9%E4%BA%8EContentProvider%E5%90%AF%E5%8A%A8%E8%AF%B7%E6%B1%82%E7%9A%84%E5%A4%84%E7%90%86.png" alt=""></p>
+<h1 id="客户端实例化ContentProvider"><a href="#客户端实例化ContentProvider" class="headerlink" title="客户端实例化ContentProvider"></a>客户端实例化ContentProvider</h1><p>ok，通过前面的分析我们知道<code>ContentProvider</code>最终是在它所在的进程实例化的。接下来就看一下客户端相关代码, </p>
+<h3 id="同一个进程中的ContentProvider实例化过程"><a href="#同一个进程中的ContentProvider实例化过程" class="headerlink" title="同一个进程中的ContentProvider实例化过程"></a>同一个进程中的ContentProvider实例化过程</h3><p>前面分析我们知道，如果<code>客户端进程</code>和<code>请求的ContentProvider</code>位于同一个进程，则<code>ActivityManager.getService().getContentProvider(...);</code>,会返回一个内容为空的<code>ContentProviderHolder</code>,<br>我们再拿刚开始客户端向服务端请求ContentProvider的代码看一下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">holder &#x3D; ActivityManager.getService().getContentProvider( getApplicationThread(), auth, userId, stable);</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;在向服务端获取holder，服务端如果发现ContentProvider的进程和当前客户端进程是同一个进程就会让客户端进程来实例化ContentProvider，具体细节可以在下面分析中看到</span><br><span class="line">holder &#x3D; installProvider(c, holder, holder.info, true &#x2F;*noisy*&#x2F;, holder.noReleaseNeeded, stable);</span><br></pre></td></tr></table></figure>
+<p>我们继续看<code>ActivityThread.installProvider</code>, 这个方法其实有两个逻辑, 下面我只截取一些关键的逻辑,我们现在只看<code>同一个进程中的ContentProvider实例化过程</code>, 即会初始化<code>localProvider</code>的逻辑:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">private ContentProviderHolder installProvider(...) &#123;</span><br><span class="line">    ContentProvider localProvider &#x3D; null;</span><br><span class="line">    IContentProvider provider;</span><br><span class="line"></span><br><span class="line">    if (holder &#x3D;&#x3D; null || holder.provider &#x3D;&#x3D; null) &#123; &#x2F;&#x2F;服务端没有缓存过这个provider，客户端需要初始化</span><br><span class="line">        final java.lang.ClassLoader cl &#x3D; c.getClassLoader();</span><br><span class="line">        LoadedApk packageInfo &#x3D; peekPackageInfo(ai.packageName, true);</span><br><span class="line"></span><br><span class="line">        localProvider &#x3D; packageInfo.getAppFactory().instantiateProvider(cl, info.name);&#x2F;&#x2F;实例化ContentProvider</span><br><span class="line">        provider &#x3D; localProvider.getIContentProvider(); </span><br><span class="line">        ...</span><br><span class="line">        localProvider.attachInfo(c, info);</span><br><span class="line">    &#125;else &#123;</span><br><span class="line">        provider &#x3D; holder.provider;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ContentProviderHolder retHolder;</span><br><span class="line">    IBinder jBinder &#x3D; provider.asBinder();</span><br><span class="line"></span><br><span class="line">    if (localProvider !&#x3D; null) &#123; &#x2F;&#x2F;同一个进程的ContentProvider</span><br><span class="line">         ProviderClientRecord pr &#x3D; mLocalProvidersByName.get(cname);</span><br><span class="line">         pr &#x3D; installProviderAuthoritiesLocked(provider, localProvider, holder); &#x2F;&#x2F;把Provider缓存起来</span><br><span class="line">        retHolder &#x3D; pr.mHolder;</span><br><span class="line">    &#125;else&#123;</span><br><span class="line">        ProviderRefCount prc &#x3D; mProviderRefCountMap.get(jBinder); &#x2F;&#x2F;其他进程的ContentProvider</span><br><span class="line">        ...</span><br><span class="line">        if(prc &#x3D;&#x3D; null)&#123;</span><br><span class="line">            prc &#x3D; new ProviderRefCount(holder, client, 1000, 1000);</span><br><span class="line">            &#x2F;&#x2F;也缓存起来</span><br><span class="line">            ProviderClientRecord client &#x3D; installProviderAuthoritiesLocked(provider, localProvider, holder);</span><br><span class="line">            mProviderRefCountMap.put(jBinder, prc);</span><br><span class="line">            ...</span><br><span class="line">        &#125;</span><br><span class="line">        retHolder &#x3D; prc.holder;</span><br><span class="line">    &#125;</span><br><span class="line">    return retHolder;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对于这个方法我们暂且知道在<code>客户端进程</code>和<code>请求的ContentProvider</code>位于同一个进程时它会: <em>实例化ContentProvider,缓存起来</em></p>
+<h3 id="不在同一个进程中的ContentProvider实例化过程"><a href="#不在同一个进程中的ContentProvider实例化过程" class="headerlink" title="不在同一个进程中的ContentProvider实例化过程"></a>不在同一个进程中的ContentProvider实例化过程</h3><p>如果<code>客户端进程</code>和<code>请求的ContentProvider</code>不在同一个进程，根据前面我们分析<code>ActivityManagerService</code>的逻辑可以知道, <code>ActivityManagerService</code>会调用<code>ContentProvider</code>所在进程的<code>proc.thread.scheduleInstallProvider(cpi)</code>,<br>其实最终调用到<code>installContentProviders()</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">private void installContentProviders(Context context, List&lt;ProviderInfo&gt; providers) &#123;</span><br><span class="line">       final ArrayList&lt;ContentProviderHolder&gt; results &#x3D; new ArrayList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">       &#x2F;&#x2F;ActivityManagerService 让客户端启动的是一个ContentProvider列表</span><br><span class="line">       for (ProviderInfo cpi : providers) &#123;</span><br><span class="line">           ContentProviderHolder cph &#x3D; installProvider(context, null, cpi,false, true ,true);</span><br><span class="line">           if (cph !&#x3D; null) &#123;</span><br><span class="line">               cph.noReleaseNeeded &#x3D; true;</span><br><span class="line">               results.add(cph);</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       ActivityManager.getService().publishContentProviders(getApplicationThread(), results); &#x2F;&#x2F;通知服务端，content provider ok啦</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>即它会调用<code>installProvider</code>来实例化<code>ContentProvider</code>，并通知服务端<code>ContentProvider</code>ok了，可以给其他进程使用了。</p>
+<p>那<code>installProvider</code>具体做了什么呢？ 前面已经分析过了，其实就是 <em>缓存下其他进程的<code>IContentProvider(Binder)</code></em>。你可以去看一下上面<br><code>installProvider</code>方法的<code>localProvider == null</code>的那个逻辑。</p>
+<p>到这里，客户端其实就拿到了<code>IContentProvider(Binder)</code>。 即<code>ContextImp.getContentResolver().query()</code>拿到了<code>IContentProvider</code>。可执行<code>query</code>了。</p>
+<p>是不是有点云里雾里的，我们看一下下面这张图，来理一下思路吧:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AE%89%E8%A3%85ContentProvider.png" alt=""></p>
+<p>到这里我们算理解了<code>ContentProvider</code>的工作原理, 我们以一个<code>ContentProvider</code>第一次启动为例来总结一下:</p>
+<ol>
+<li>进程在启动ContentProvider时会向<code>ActivityManagerService</code>要，<code>ActivityManagerService</code>如果没有就会让客户端启动这个<code>ContentProvider</code></li>
+<li>客户端进程启动<code>ContentProvider</code>后就会缓存起来, 方便后续获取</li>
+<li><code>ActivityManagerService</code>只会缓存那些可能跨进程访问的<code>ContentProvider</code></li>
+<li>和不同进程的<code>ContentProvider</code>通信是通过<code>Binder</code>实现的</li>
+</ol>
+<h1 id="VirtualApk关于ContentProvider的处理"><a href="#VirtualApk关于ContentProvider的处理" class="headerlink" title="VirtualApk关于ContentProvider的处理"></a>VirtualApk关于ContentProvider的处理</h1><p><code>VirtualApk</code>它是一个插件化框架，它所需要支持的特性是: <code>插件中的ContentProvider</code>如何跑起来？ 它又没有在manifest中注册。</p>
+<p>其实很简单，类似于它对<code>插件Service的支持</code>:</p>
+<ol>
+<li>定义一个占坑的ContentProvider（运行在一个独立的进程）</li>
+<li>hook掉<code>插件Activity的Context</code>,并返回自定义的<code>PluginContentResolver</code></li>
+<li><code>PluginContentResolver</code>在获取<code>ContentProvider</code>时，先把<code>个占坑的ContentProvider</code>唤醒。即让它在<code>ActivityManagerService</code>中跑起来</li>
+<li>返回给插件一个<code>IContentProvider</code>的动态代理。</li>
+<li>插件通过这个<code>IContentProvider动态代理</code>来对<code>ContentProvider</code>做增删改查</li>
+<li>在动态代理中把插件的增删改查的Uri,重新拼接定位到<code>占坑的ContentProvider</code></li>
+<li>在<code>占坑的ContentProvider</code>实例化插件请求的<code>ContentProvider</code>，并做对应的增删该查。</li>
+</ol>
+<p>所以:</p>
+<ol>
+<li><code>插件的ContentProvider</code>是运行在<code>占坑的ContentProvider</code>进程中的。</li>
+<li><code>插件的ContentProvider</code>是不会运行在自己自定的进程中的，即没有多进程<code>ContentProvider</code>的概念。</li>
+</ol>
+<blockquote>
+<p>欢迎Star我的<a href="https://github.com/SusionSuc/AdvancedAndroid" target="_blank" rel="noopener">Android进阶计划</a>,看更多干货</p>
+</blockquote>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    RecyclerView动画源码浅析
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">Android触摸事件全过程分析</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

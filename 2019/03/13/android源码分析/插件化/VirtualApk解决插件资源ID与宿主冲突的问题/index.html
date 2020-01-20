@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>VirtualApk解决插件资源ID与宿主冲突的问题 | susion</title>
+    
+    
+        <meta name="keywords" content="VirtualApk解决插件资源ID与宿主冲突的问题" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="前面分析了VirtualApk支持插件中的4大组件运行的原理。本文就来讨论一下如何解决插件资源id和宿主资源id冲突的问题。本文会涉及到Andoird资源的编译和打包原理。因此对这方面的知识最好有一定的了解。可以参考老罗的Andoird资源的编译和打包一文。  为什么会冲突？为什么要解决资源id冲突？首先宿主apk和插件apk是两个不同的apk，他们在编译时都会产生自己的resources.ar">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VirtualApk解决插件资源ID与宿主冲突的问题">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="前面分析了VirtualApk支持插件中的4大组件运行的原理。本文就来讨论一下如何解决插件资源id和宿主资源id冲突的问题。本文会涉及到Andoird资源的编译和打包原理。因此对这方面的知识最好有一定的了解。可以参考老罗的Andoird资源的编译和打包一文。  为什么会冲突？为什么要解决资源id冲突？首先宿主apk和插件apk是两个不同的apk，他们在编译时都会产生自己的resources.ar">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2019-03-13T02:05:27.996Z">
+<meta property="article:modified_time" content="2020-01-20T07:36:56.703Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file active"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/插件化/VirtualApk解决插件资源ID与宿主冲突的问题" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/">插件化</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">
+            <time datetime="2019-03-13T02:05:27.996Z" itemprop="datePublished">2019-03-13</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            VirtualApk解决插件资源ID与宿主冲突的问题
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <blockquote>
+<p>前面分析了<code>VirtualApk</code><a href="https://github.com/SusionSuc/AdvancedAndroid/blob/master/%E6%8F%92%E4%BB%B6%E5%8C%96/README.md" target="_blank" rel="noopener">支持插件中的4大组件运行的原理</a>。本文就来讨论一下如何解决插件资源id和宿主资源id冲突的问题。<br>本文会涉及到<code>Andoird资源的编译和打包</code>原理。因此对这方面的知识最好有一定的了解。可以参考<code>老罗</code>的<a href="https://blog.csdn.net/luoshengyang/article/details/8744683" target="_blank" rel="noopener">Andoird资源的编译和打包</a>一文。</p>
+</blockquote>
+<h2 id="为什么会冲突？为什么要解决资源id冲突？"><a href="#为什么会冲突？为什么要解决资源id冲突？" class="headerlink" title="为什么会冲突？为什么要解决资源id冲突？"></a>为什么会冲突？为什么要解决资源id冲突？</h2><p>首先宿主apk和插件apk是两个不同的apk，他们在编译时都会产生自己的<code>resources.arsc</code>。即他们是两个独立的编译过程。那么它们的<code>resources.arsc</code>中的资源id必定是有相同的情况。这就会出现问题了:</p>
+<p>我们前面已经了解过，宿主在加载插件的资源的时候其实是新new了一个<code>Resources</code>，这个新的<code>Resources</code>是包含宿主和插件的资源的。所以一个<code>Resources</code>中就出现了资源id重复的情况，这样在运行的时候使用资源id来获取资源就会报错。</p>
+<h2 id="怎么解决呢？"><a href="#怎么解决呢？" class="headerlink" title="怎么解决呢？"></a>怎么解决呢？</h2><p>目前一共有两种思路:</p>
+<ol>
+<li>修改aapt源码，定制aapt工具，编译期间修改PP段。(PP字段是资源id的第一个字节，表示包空间)</li>
+</ol>
+<p><code>DynamicAPK</code>的做法就是如此，定制aapt，替换google的原始aapt，在编译的时候可以传入参数修改PP段：例如传入0x05编译得到的资源的PP段就是0x05。对于具体实现可以参考这篇博客<a href="https://blog.csdn.net/jiangwei0910410003/article/details/50820219" target="_blank" rel="noopener">Android中如何修改编译的资源ID值</a></p>
+<ol start="2">
+<li>修改aapt的产物，即，编译后期重新整理插件Apk的资源，编排ID。</li>
+</ol>
+<p><code>VirtualApk</code>采用的就是这个方案。本文就大致看一下这个方案的实现。</p>
+<h2 id="VirtualApk的解决方案"><a href="#VirtualApk的解决方案" class="headerlink" title="VirtualApk的解决方案"></a>VirtualApk的解决方案</h2><p>大体实现思路:<em>自定义gradle transform 插件，在apk资源编译任务完成后，重新设置插件的<code>resources.arsc</code>文件中的资源id,并更新<code>R.java</code>文件</em> </p>
+<p>比如，你在编译插件apk时设置了:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apply plugin: &#39;com.didi.virtualapk.plugin&#39;</span><br><span class="line"></span><br><span class="line">virtualApk &#123;</span><br><span class="line">    packageId &#x3D; 0x6f &#x2F;&#x2F;插件资源ID的PP字段</span><br><span class="line">    targetHost &#x3D; &#39;..&#x2F;VirtualApk&#x2F;app&#39; &#x2F;&#x2F; 宿主的目录</span><br><span class="line">    applyHostMapping &#x3D; true </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在运行编译插件apk的任务后，产生的插件的资源id的PP字段都是<code>0x6f</code>。</p>
+<p><code>VirtualApk</code>hook了<code>ProcessAndroidResources</code>task。这个task是用来编译Android资源的。<code>VirtualApk</code>拿到这个task的输出结果，做了以下处理:</p>
+<ol>
+<li><p>根据编译产生的<code>R.txt</code>文件收集插件中所有的资源</p>
+</li>
+<li><p>根据编译产生的<code>R.txt</code>文件收集宿主apk中的所有资源</p>
+</li>
+<li><p>过滤插件资源:过滤掉在宿主中已经存在的资源</p>
+</li>
+<li><p>重新设置插件资源的资源ID</p>
+</li>
+<li><p>删除掉插件资源目录下前面已经被过滤掉的资源</p>
+</li>
+<li><p>重新编排插件<code>resources.arsc</code>文件中插件资源ID为新设置的资源ID</p>
+</li>
+<li><p>重新产生R.java文件</p>
+</li>
+</ol>
+<p><em>下面呢我们就来看下具体代码。这块水很深。所以下面的代码就当伪代码看一下就好，我们的主要目的是理解大致的实现思路。</em></p>
+<h2 id="粗略浏览具体实现代码"><a href="#粗略浏览具体实现代码" class="headerlink" title="粗略浏览具体实现代码"></a>粗略浏览具体实现代码</h2><h3 id="根据R-txt文件收集插件中所有的资源"><a href="#根据R-txt文件收集插件中所有的资源" class="headerlink" title="根据R.txt文件收集插件中所有的资源"></a>根据<code>R.txt</code>文件收集插件中所有的资源</h3><p><code>R.txt</code>文件是在编译资源过程中产生的资源ID记录文件，在<code>build/intermediates/symbols/xx/xx/R.txt</code>可以找到这个文件，它的格式如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">int anim abc_fade_in 0x7f010000  </span><br><span class="line">int anim abc_fade_out 0x7f010001</span><br><span class="line">.....</span><br></pre></td></tr></table></figure>
+
+<p>看一下具体代码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">private void parseResEntries(File RSymbolFile, ListMultimap allResources, List styleableList) &#123;</span><br><span class="line">      RSymbolFile.eachLine &#123; line -&gt;</span><br><span class="line">          &#x2F;**</span><br><span class="line">           *  Line Content:</span><br><span class="line">           *  Common Res:  int string abc_action_bar_home_description 0x7f090000</span><br><span class="line">           *  Styleable:   int[] styleable TagLayout &#123; 0x010100af, 0x7f0102b5, 0x7f0102b6 &#125;</span><br><span class="line">           *               or int styleable TagLayout_android_gravity 0</span><br><span class="line">           *&#x2F;</span><br><span class="line">          if (!line.empty) &#123;</span><br><span class="line">              def tokenizer &#x3D; new StringTokenizer(line)</span><br><span class="line">              def valueType &#x3D; tokenizer.nextToken()     &#x2F;&#x2F; value type (int or int[])</span><br><span class="line">              def resType &#x3D; tokenizer.nextToken()      &#x2F;&#x2F; resource type (attr&#x2F;string&#x2F;color etc.)</span><br><span class="line">              def resName &#x3D; tokenizer.nextToken()</span><br><span class="line">              def resId &#x3D; tokenizer.nextToken(&#39;\r\n&#39;).trim()</span><br><span class="line"></span><br><span class="line">              if (resType &#x3D;&#x3D; &#39;styleable&#39;) &#123;</span><br><span class="line">                  styleableList.add(new StyleableEntry(resName, resId, valueType))</span><br><span class="line">              &#125; else &#123;</span><br><span class="line">                  allResources.put(resType, new ResourceEntry(resType, resName, Integer.decode(resId)))</span><br><span class="line">              &#125;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>即收集所有资源:<code>资源名称</code>、<code>资源ID</code>、<code>资源类型</code>等。然后保存在集合中:<code>allResources</code>和<code>styleableList</code></p>
+<h3 id="根据编译产生的R-txt文件收集宿主apk中的所有资源"><a href="#根据编译产生的R-txt文件收集宿主apk中的所有资源" class="headerlink" title="根据编译产生的R.txt文件收集宿主apk中的所有资源"></a>根据编译产生的<code>R.txt</code>文件收集宿主apk中的所有资源</h3><p>和第一步相同</p>
+<h3 id="过滤插件资源-过滤掉在宿主中已经存在的资源"><a href="#过滤插件资源-过滤掉在宿主中已经存在的资源" class="headerlink" title="过滤插件资源:过滤掉在宿主中已经存在的资源"></a>过滤插件资源:过滤掉在宿主中已经存在的资源</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">private void filterPluginResources() &#123;</span><br><span class="line">    allResources.values().each &#123;  &#x2F;&#x2F; allResources 就是前面解析出来的插件的所有资源</span><br><span class="line">        def index &#x3D; hostResources.get(it.resourceType).indexOf(it)   </span><br><span class="line">        if(index &gt;&#x3D; 0)&#123;  &#x2F;&#x2F;插件的资源在宿主中存在</span><br><span class="line">            it.newResourceId &#x3D; hostResources.get(it.resourceType).get(index).resourceId &#x2F;&#x2F;把这个一样的插件资源的id设置成宿主的id</span><br><span class="line">            hostResources.get(it.resourceType).set(index, it) &#x2F;&#x2F;在宿主中更新这个资源</span><br><span class="line">        &#125; else &#123; &#x2F;&#x2F;插件的资源在宿主中不存在</span><br><span class="line">            pluginResources.put(it.resourceType, it)  </span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    allStyleables.each &#123;</span><br><span class="line">        def index &#x3D; hostStyleables.indexOf(it)</span><br><span class="line">        if(index &gt;&#x3D; 0) &#123;</span><br><span class="line">            it.value &#x3D; hostStyleables.get(index).value</span><br><span class="line">            hostStyleables.set(index, it)</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            pluginStyleables.add(it)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即经过上面的操作，<code>pluginResources</code>只含有插件的资源。这份资源和宿主的资源集合没有交集，即没有相同的资源。</p>
+<h3 id="重新设置插件的资源ID"><a href="#重新设置插件的资源ID" class="headerlink" title="重新设置插件的资源ID"></a>重新设置插件的资源ID</h3><p>这一步就是核心了，逻辑很简单，即基于自定义的<code>PP</code>字段的值，修改上面已经收集好的<code>pluginResources</code>中资源的资源ID:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">private void reassignPluginResourceId() &#123;</span><br><span class="line"></span><br><span class="line">       &#x2F;&#x2F;先根据 typeId 把前面收集到的资源排序</span><br><span class="line">       def resourceIdList &#x3D; []</span><br><span class="line">       pluginResources.keySet().each &#123; String resType -&gt;</span><br><span class="line">           List&lt;ResourceEntry&gt; entryList &#x3D; pluginResources.get(resType)</span><br><span class="line">           resourceIdList.add([resType: resType, typeId: entryList.empty ? -100 : parseTypeIdFromResId(entryList.first().resourceId)])</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       resourceIdList.sort &#123; t1, t2 -&gt;</span><br><span class="line">           t1.typeId - t2.typeId</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       &#x2F;&#x2F;重新设置插件的资源id</span><br><span class="line">       int lastType &#x3D; 1</span><br><span class="line">       resourceIdList.each &#123;</span><br><span class="line">           if (it.typeId &lt; 0) &#123;</span><br><span class="line">               return</span><br><span class="line">           &#125;</span><br><span class="line">           def typeId &#x3D; 0</span><br><span class="line">           def entryId &#x3D; 0</span><br><span class="line">           typeId &#x3D; lastType++</span><br><span class="line">           pluginResources.get(it.resType).each &#123;</span><br><span class="line">               it.setNewResourceId(virtualApk.packageId, typeId, entryId++)  &#x2F;&#x2F; virtualApk.packageId 即我们在gradle中自定义的 packageId</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       List&lt;ResourceEntry&gt; attrEntries &#x3D; allResources.get(&#39;attr&#39;)</span><br><span class="line"></span><br><span class="line">       pluginStyleables.findAll &#123; it.valueType &#x3D;&#x3D; &#39;int[]&#39;&#125;.each &#123; StyleableEntry styleableEntry-&gt;</span><br><span class="line">           List&lt;String&gt; values &#x3D; styleableEntry.valueAsList</span><br><span class="line">           values.eachWithIndex &#123; hexResId, idx -&gt;</span><br><span class="line">               ResourceEntry resEntry &#x3D; attrEntries.find &#123; it.hexResourceId &#x3D;&#x3D; hexResId &#125;</span><br><span class="line">               if (resEntry !&#x3D; null) &#123;</span><br><span class="line">                   values[idx] &#x3D; resEntry.hexNewResourceId</span><br><span class="line">               &#125;</span><br><span class="line">           &#125;</span><br><span class="line">           styleableEntry.value &#x3D; values</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>ok，经过上面的处理，<code>pluginResources</code>中的资源的资源id都是重新设置的新的资源Id。</p>
+<h3 id="删除掉插件资源目录下前面已经被过滤掉的资源"><a href="#删除掉插件资源目录下前面已经被过滤掉的资源" class="headerlink" title="删除掉插件资源目录下前面已经被过滤掉的资源"></a>删除掉插件资源目录下前面已经被过滤掉的资源</h3><p>我们前面经过和宿主的资源对比后，可能已经删除了插件中的一些资源id，但是对应的文件还没有删除，因此需要把文件也删除掉:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">void filterResources(final List&lt;?&gt; retainedTypes, final Set&lt;String&gt; outFilteredResources) &#123;</span><br><span class="line">       def resDir &#x3D; new File(assetDir, &#39;res&#39;)   &#x2F;&#x2F;遍历插件的资源目录</span><br><span class="line">       resDir.listFiles().each &#123; typeDir -&gt;</span><br><span class="line">           def type &#x3D; retainedTypes.find &#123; typeDir.name.startsWith(it.name) &#125;</span><br><span class="line">           if (type &#x3D;&#x3D; null) &#123;   &#x2F;&#x2F;插件过滤后的资源已经不含有这个目录了，直接删除掉</span><br><span class="line">               typeDir.listFiles().each &#123;</span><br><span class="line">                   outFilteredResources.add(&quot;res&#x2F;$typeDir.name&#x2F;$it.name&quot;)</span><br><span class="line">               &#125;</span><br><span class="line">               typeDir.deleteDir()</span><br><span class="line">               return  &#x2F;&#x2F;这个return 是跳过这次循环</span><br><span class="line">           &#125;</span><br><span class="line"></span><br><span class="line">           def entryFiles &#x3D; typeDir.listFiles()</span><br><span class="line">           def retainedEntryCount &#x3D; entryFiles.size()</span><br><span class="line"></span><br><span class="line">           entryFiles.each &#123; entryFile -&gt;</span><br><span class="line">               def entry &#x3D; type.entries.find &#123; entryFile.name.startsWith(&quot;$&#123;it.name&#125;.&quot;) &#125;</span><br><span class="line">               if (entry &#x3D;&#x3D; null) &#123;   &#x2F;&#x2F;逻辑同上</span><br><span class="line">                   outFilteredResources.add(&quot;res&#x2F;$typeDir.name&#x2F;$entryFile.name&quot;)</span><br><span class="line">                   entryFile.delete()</span><br><span class="line">                   retainedEntryCount--</span><br><span class="line">               &#125;</span><br><span class="line">           &#125;</span><br><span class="line"></span><br><span class="line">           if (retainedEntryCount &#x3D;&#x3D; 0) &#123;</span><br><span class="line">               typeDir.deleteDir()</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="重新编排插件resources-arsc文件中插件资源ID为新设置的资源ID"><a href="#重新编排插件resources-arsc文件中插件资源ID为新设置的资源ID" class="headerlink" title="重新编排插件resources.arsc文件中插件资源ID为新设置的资源ID"></a>重新编排插件<code>resources.arsc</code>文件中插件资源ID为新设置的资源ID</h3><p>这个代码就不列了，感兴趣可以查看<code>VirtualApk</code>源代码 : <a href="https://github.com/didi/VirtualAPK/blob/master/virtualapk-gradle-plugin/src/main/groovy/com.didi.virtualapk/aapt/ArscEditor.groovy" target="_blank" rel="noopener">ArscEditor.slice()</a></p>
+<h3 id="重新产生R-java文件"><a href="#重新产生R-java文件" class="headerlink" title="重新产生R.java文件"></a>重新产生R.java文件</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">public static void generateRJava(File dest, String pkg, ListMultimap&lt;String, ResourceEntry&gt; resources, List&lt;StyleableEntry&gt; styleables) &#123;</span><br><span class="line">       if (!dest.parentFile.exists()) &#123;</span><br><span class="line">           dest.parentFile.mkdirs()</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       if (!dest.exists()) &#123;</span><br><span class="line">           dest.createNewFile()</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       dest.withPrintWriter &#123; pw -&gt;</span><br><span class="line">           pw.println &quot;package $&#123;pkg&#125;;&quot;</span><br><span class="line">           pw.println &quot;public final class R &#123;&quot;</span><br><span class="line"></span><br><span class="line">           resources.keySet().each &#123; type -&gt;</span><br><span class="line">               pw.println &quot;    public static final class $&#123;type&#125; &#123;&quot;</span><br><span class="line">               resources.get(type).each &#123; entry -&gt;</span><br><span class="line">                   pw.println &quot;        public static final int $&#123;entry.resourceName&#125; &#x3D; $&#123;entry.hexNewResourceId&#125;;&quot;</span><br><span class="line">               &#125;</span><br><span class="line">               pw.println &quot;    &#125;&quot;</span><br><span class="line">           &#125;</span><br><span class="line"></span><br><span class="line">           pw.println &quot;    public static final class styleable &#123;&quot;</span><br><span class="line">           styleables.each &#123; styleable -&gt;</span><br><span class="line">                   pw.println &quot;        public static final $&#123;styleable.valueType&#125; $&#123;styleable.name&#125; &#x3D; $&#123;styleable.value&#125;;&quot;</span><br><span class="line">           &#125;</span><br><span class="line">           pw.println &quot;    &#125;&quot;</span><br><span class="line">           pw.println &quot;&#125;&quot;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>欢迎Star我的<a href="https://github.com/SusionSuc/AdvancedAndroid" target="_blank" rel="noopener">Android进阶计划</a>,看更多干货。</p>
+</blockquote>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    WMRouter路由节点的动态生成
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">WMRouter基本路由架构梳理</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

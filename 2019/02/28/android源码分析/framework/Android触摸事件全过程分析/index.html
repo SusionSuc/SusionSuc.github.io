@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>Android触摸事件全过程分析 | susion</title>
+    
+    
+        <meta name="keywords" content="Android触摸事件全过程分析" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="本文会分析触摸事件的产生 -&gt; Activity.dispatchTouchEvent()整个过程。希望对于触摸事件的产生和系统处理过程有一个简单了解即可。  触摸事件的产生 : 触摸事件与中断学习过Linux驱动程序编写的同学可能知道Linux是以中断的方式处理用户的输入事件。触摸事件其实是一种特殊的输入事件。它的处理方式与输入事件相同，只不过触摸事件的提供的信息要稍微复杂一些。 触摸事">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android触摸事件全过程分析">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="本文会分析触摸事件的产生 -&gt; Activity.dispatchTouchEvent()整个过程。希望对于触摸事件的产生和系统处理过程有一个简单了解即可。  触摸事件的产生 : 触摸事件与中断学习过Linux驱动程序编写的同学可能知道Linux是以中断的方式处理用户的输入事件。触摸事件其实是一种特殊的输入事件。它的处理方式与输入事件相同，只不过触摸事件的提供的信息要稍微复杂一些。 触摸事">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/EventHub_InputReader_InputDispatcher.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6InputChannel%E7%9A%84%E9%80%9A%E4%BF%A1.png">
+<meta property="article:published_time" content="2019-02-28T03:09:02.370Z">
+<meta property="article:modified_time" content="2020-01-20T11:36:55.523Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/EventHub_InputReader_InputDispatcher.png">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/framework/Android触摸事件全过程分析" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/">framework</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">
+            <time datetime="2019-02-28T03:09:02.370Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Android触摸事件全过程分析
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <blockquote>
+<p>本文会分析<strong>触摸事件的产生 -&gt; Activity.dispatchTouchEvent()</strong>整个过程。希望对于<strong>触摸事件的产生和系统处理过程</strong>有一个简单了解即可。</p>
+</blockquote>
+<h2 id="触摸事件的产生-触摸事件与中断"><a href="#触摸事件的产生-触摸事件与中断" class="headerlink" title="触摸事件的产生 : 触摸事件与中断"></a>触摸事件的产生 : 触摸事件与中断</h2><p>学习过<code>Linux</code>驱动程序编写的同学可能知道<code>Linux</code>是以中断的方式处理用户的输入事件。触摸事件其实是一种特殊的输入事件。它的处理方式与输入事件相同，只不过触摸事件的提供的信息要稍微复杂一些。</p>
+<p>触摸事件产生的大致原理是:用户对硬件进行操作(触摸屏)会导致这个硬件产生对应的中断。该硬件的驱动程序会处理这个中断。不同的硬件驱动程序处理的方式不同，不过最终都是将数据处理后存放进对应的<code>/dev/input/eventX</code>文件中。所以<strong>硬件驱动程序完成了触摸事件的数据收集</strong></p>
+<p>那<code>/dev/input/eventX</code>中的触摸事件是如何派发到<code>Activity</code>的呢？其实整个过程可以分为两个部分:一个是<code>native(C++)层</code>的处理、一个是<code>java层</code>的处理。我们先来看一下<code>native层</code>是如何处理的。</p>
+<h2 id="系统对触摸事件的处理"><a href="#系统对触摸事件的处理" class="headerlink" title="系统对触摸事件的处理"></a>系统对触摸事件的处理</h2><p>在<code>native层</code>主要是通过下面3个组件来对触摸事件进行处理的，这3个组件都运行在系统服务中:</p>
+<ul>
+<li>EventHub : 它的作用是监听、读取<code>/dev/input</code>目录下产生的新事件，并封装成<code>RawEvent</code>结构体供<code>InputReader</code>使用。</li>
+<li>InputReader : 通过<code>EventHub</code>从<code>/dev/input</code>节点获取事件信息，转换成<code>EventEntry</code>事件加入到<code>InputDispatcher</code>的<code>mInboundQueue</code>队列中。</li>
+<li>InputDispatcher : 从<code>mInboundQueue</code>队列取出事件，转换成<code>DispatchEntry</code>事件加入到<code>Connection</code>的<code>outboundQueue</code>队列。然后使用<code>InputChannel</code>分发事件到<code>java层</code>。</li>
+</ul>
+<p>可以用下面这张图描述上面3个组件之间的逻辑:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/EventHub_InputReader_InputDispatcher.png" alt=""></p>
+<h2 id="InputChannel"><a href="#InputChannel" class="headerlink" title="InputChannel"></a>InputChannel</h2><p>我们可以简单的把它理解为一个<code>socket</code>, 即可以用来接收数据或者发送数据。一个<code>Window</code>会对应两个<code>InputChannel</code>，这两个<code>InputChannel</code>会相互通信。一个<code>InputChannel</code>会注册到<code>InputDispatcher</code>中, 称为<code>serverChannel(服务端InputChannel)</code>。另一个会保留在应用程序进程的<code>Window</code>中,称为<code>clientChannel(客户端InputChannel)</code>。</p>
+<p>下面来简要了解一下这两个<code>InputChannel</code>的创建过程,在<a href="Android的UI显示原理之Surface的创建.md">Android的UI显示原理之Surface的创建</a>一文中知道,一个应用程序的<code>Window</code>在<code>WindowManagerService</code>中会对应一个<code>WindowState</code>,<code>WMS</code>在创建<code>WindowState</code>时就会创建这两个<code>InputChannel</code>,下面分别看一下他们的创建过程。</p>
+<h3 id="服务端InputChannel的创建及注册"><a href="#服务端InputChannel的创建及注册" class="headerlink" title="服务端InputChannel的创建及注册"></a>服务端InputChannel的创建及注册</h3><blockquote>
+<p>WindowManagerService.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"> public int addWindow(Session session...) &#123;</span><br><span class="line">        ...</span><br><span class="line">        WindowState win &#x3D; new WindowState(this, session, client, token,</span><br><span class="line">            attachedWindow, appOp[0], seq, attrs, viewVisibility, displayContent);</span><br><span class="line">        ...</span><br><span class="line">        final boolean openInputChannels &#x3D; (outInputChannel !&#x3D; null &amp;&amp; (attrs.inputFeatures &amp; INPUT_FEATURE_NO_INPUT_CHANNEL) &#x3D;&#x3D; 0);</span><br><span class="line">        if  (openInputChannels) &#123;</span><br><span class="line">            win.openInputChannel(outInputChannel);  </span><br><span class="line">        &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void openInputChannel(InputChannel outInputChannel) &#123; &#x2F;&#x2F;这个 outInputChannel 其实是应用程序获取的inputchannel,它其实就是 inputChannels[1];</span><br><span class="line">    InputChannel[] inputChannels &#x3D; InputChannel.openInputChannelPair(makeInputChannelName()); &#x2F;&#x2F;通过native创建了两个InputChannel,实际上是创建了两个socket</span><br><span class="line">    mInputChannel &#x3D; inputChannels[0]; &#x2F;&#x2F; 这里将服务端的inputChannel保存在了WindowState中</span><br><span class="line">    mClientChannel &#x3D; inputChannels[1];</span><br><span class="line">    ....</span><br><span class="line">    mService.mInputManager.registerInputChannel(mInputChannel, mInputWindowHandle); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>registerInputChannel(..);</code>实际上就是把<code>服务端InputChannel</code>注册到了<code>InputDispatcher</code>中。上图中的<code>InputChannel</code>其实就是在创建一个<code>WindowState</code>时注册的。来看一下<code>InputDispatcher</code>中注册<code>InputChannel</code>都干了什么:</p>
+<blockquote>
+<p>InputDispatcher.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">status_t InputDispatcher::registerInputChannel(const sp&lt;InputChannel&gt;&amp; inputChannel,const sp&lt;InputWindowHandle&gt;&amp; inputWindowHandle, bool monitor) &#123;</span><br><span class="line"></span><br><span class="line">    sp&lt;Connection&gt; connection &#x3D; new Connection(inputChannel, inputWindowHandle, monitor); &#x2F;&#x2F;利用 inputChannel 创建了一个 connection,简单的理解为socket的链接。</span><br><span class="line"></span><br><span class="line">    int fd &#x3D; inputChannel-&gt;getFd();</span><br><span class="line">    mConnectionsByFd.add(fd, connection);</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;把这个 inputChannel 的 fd添加到 Looper中</span><br><span class="line">    mLooper-&gt;addFd(fd, 0, ALOOPER_EVENT_INPUT, handleReceiveCallback, this); </span><br><span class="line"></span><br><span class="line">    mLooper-&gt;wake();</span><br><span class="line"></span><br><span class="line">    return OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即利用<code>InputChannel</code>创建了一个<code>Connection</code>(<code>InputDispatcher</code>会通过这个<code>Connection</code>来向<code>InputChannel</code>发射数据),并且把这个<code>InputChannel</code>添加到<code>mLooper</code>中。</p>
+<p>那这里这个<code>mLooper</code>是什么呢？是UI线程的那个<code>Looper</code>吗？这部分我们后面再看，我们先来看一下<code>客户端InputChannel</code>的相关过程。</p>
+<h3 id="客户端InputChannel的相关逻辑"><a href="#客户端InputChannel的相关逻辑" class="headerlink" title="客户端InputChannel的相关逻辑"></a>客户端InputChannel的相关逻辑</h3><p>客户端(应用程序)<code>Window</code>是如何通过<code>InputChannel</code>来接收触摸事件的呢？上面<code>WindowState.openInputChannel()</code>方法创建完<code>InputChannel</code>后会走到下面的代码:</p>
+<blockquote>
+<p>ViewRootImpl.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">if (mInputChannel !&#x3D; null) &#123; &#x2F;&#x2F; mInputChannel 即为前面创建的 client inputchannel</span><br><span class="line">    mInputEventReceiver &#x3D; new WindowInputEventReceiver(mInputChannel, Looper.myLooper());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里的new了一个<code>WindowInputEventReceiver</code>,它继承自<code>InputEventReceiver</code>,看一下它的初始化过程:</p>
+<blockquote>
+<p>InputEventReceiver.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public InputEventReceiver(InputChannel inputChannel, Looper looper) &#123;</span><br><span class="line">    ...</span><br><span class="line">    mInputChannel &#x3D; inputChannel;</span><br><span class="line">    mMessageQueue &#x3D; looper.getQueue();</span><br><span class="line">    mReceiverPtr &#x3D; nativeInit(new WeakReference&lt;InputEventReceiver&gt;(this),inputChannel, mMessageQueue);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">static jlong nativeInit(JNIEnv* env, jclass clazz, jobject receiverWeak, jobject inputChannelObj, jobject messageQueueObj) &#123;</span><br><span class="line">    ...</span><br><span class="line">    sp&lt;NativeInputEventReceiver&gt; receiver &#x3D; new NativeInputEventReceiver(env,receiverWeak, inputChannel, messageQueue);</span><br><span class="line">    status_t status &#x3D; receiver-&gt;initialize();</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即主要初始化了<code>NativeInputEventReceiver</code> ,它的<code>initialize()</code>调用了<code>setFdEvents()</code>:</p>
+<blockquote>
+<p>android_view_InputEventReceiver.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void NativeInputEventReceiver::setFdEvents(int events) &#123;</span><br><span class="line">    ...</span><br><span class="line">    int fd &#x3D; mInputConsumer.getChannel()-&gt;getFd(); &#x2F;&#x2F; 这个fd 就是客户端的 InputChannel 的 Connection</span><br><span class="line">    ...</span><br><span class="line">    mMessageQueue-&gt;getLooper()-&gt;addFd(fd, 0, events, this, NULL);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里将客户端的<code>InputChannel的 Connection Fd</code>加入到了<code>Native Looper（下面会分析它）</code>中。看一下<code>addFd</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">int Looper::addFd(int fd, int ident, int events, const sp&lt;LooperCallback&gt;&amp; callback, void* data) &#123;</span><br><span class="line">    Request request;</span><br><span class="line">    request.fd &#x3D; fd;</span><br><span class="line">    request.callback &#x3D; callback;</span><br><span class="line">    request.events &#x3D; events;</span><br><span class="line">    ...</span><br><span class="line">    mRequests.add(fd, request);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里就是利用<code>fd</code>来构造了一个<code>Request</code>。 <strong>注意 :这里的<code>callback</code>就是<code>NativeInputEventReceiver</code></strong>。</p>
+<p>OK,到这里我们就看完了<code>客户端的InputChannel</code>的初始化。并且还知道 <strong><code>Looper</code>中是持有着<code>客户端InputChannel</code>和<code>服务端InputChannel</code>的<code>Connection</code></strong> 。</p>
+<p>那么就继续来看一下上面提到的<code>native消息队列</code>与<code>Native Looper</code>,它有什么作用。</p>
+<h2 id="Android-Native-消息循环"><a href="#Android-Native-消息循环" class="headerlink" title="Android Native 消息循环"></a>Android Native 消息循环</h2><p>我们知道<code>Looper</code>从<code>MessageQueue</code>中不断获取消息并处理消息。其实在<code>MessageQueue</code>创建时还创建了一个<code>native</code>的消息队列。<code>InputDispatcher</code>派发的触摸事件就会放到这个消息队列中等待执行。先来看一下这个消息队列的创建:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;MessageQueue.java</span><br><span class="line">MessageQueue(boolean quitAllowed) &#123;</span><br><span class="line">    mQuitAllowed &#x3D; quitAllowed;</span><br><span class="line">    mPtr &#x3D; nativeInit();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;android_os_MessageQueue.cpp</span><br><span class="line">static jlong android_os_MessageQueue_nativeInit(JNIEnv* env, jclass clazz) &#123;</span><br><span class="line">    NativeMessageQueue* nativeMessageQueue &#x3D; new NativeMessageQueue(); </span><br><span class="line">    ...</span><br><span class="line">    nativeMessageQueue-&gt;incStrong(env);</span><br><span class="line">    return reinterpret_cast&lt;jlong&gt;(nativeMessageQueue);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;android_os_MessageQueue.cpp</span><br><span class="line">NativeMessageQueue::NativeMessageQueue() : mPollEnv(NULL), mPollObj(NULL), mExceptionObj(NULL) &#123;</span><br><span class="line">    mLooper &#x3D; Looper::getForThread();  &#x2F;&#x2F; 其实就是主线程的Looper</span><br><span class="line">    if (mLooper &#x3D;&#x3D; NULL) &#123;</span><br><span class="line">        mLooper &#x3D; new Looper(false); </span><br><span class="line">        Looper::setForThread(mLooper);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即创建了一个<code>NativeMessageQueue</code>。<code>Looper</code>在循环读取<code>MessageQueue</code>中的消息的同时其实也读取了<code>NativeMessageQueue</code>中的消息:</p>
+<blockquote>
+<p>Looper.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">public static void loop() &#123;</span><br><span class="line">    final Looper me &#x3D; myLooper();</span><br><span class="line">    ...</span><br><span class="line">    final MessageQueue queue &#x3D; me.mQueue;</span><br><span class="line">    ...</span><br><span class="line">    for (;;) &#123;</span><br><span class="line">        Message msg &#x3D; queue.next(); &#x2F;&#x2F; might block</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Message next() &#123;</span><br><span class="line">    ....</span><br><span class="line">    for (;;) &#123;</span><br><span class="line">        ...</span><br><span class="line">        nativePollOnce(ptr, nextPollTimeoutMillis);</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即调用到了<code>nativePollOnce()</code>方法。在这个方法中会读取<code>Server InputChannel</code>发送的触摸事件(怎么发送的后面会讲到)。这个方法最终调用到<code>Looper.pollInner()</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">int Looper::pollInner(int timeoutMillis) &#123;</span><br><span class="line">    ...</span><br><span class="line">    struct epoll_event eventItems[EPOLL_MAX_EVENTS];</span><br><span class="line">    int eventCount &#x3D; epoll_wait(mEpollFd, eventItems, EPOLL_MAX_EVENTS, timeoutMillis);  &#x2F;&#x2F; 阻塞读取event， 并保存到eventItems</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    for (int i &#x3D; 0; i &lt; eventCount; i++) &#123; &#x2F;&#x2F;依次处理每一个读取到的event</span><br><span class="line">        int fd &#x3D; eventItems[i].data.fd; </span><br><span class="line">        uint32_t epollEvents &#x3D; eventItems[i].events;</span><br><span class="line"></span><br><span class="line">        ... </span><br><span class="line">        ssize_t requestIndex &#x3D; mRequests.indexOfKey(fd);</span><br><span class="line">        ...</span><br><span class="line">        pushResponse(events, mRequests.valueAt(requestIndex));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>pollInner</code>会调用<code>pushResponse</code>来依次处理每一个<code>Event</code>。这里的<code>mRequests.valueAt(requestIndex)</code>就是前面<code>客户端的InputChannel</code>注册时的一些信息。<code>pushResponse</code>会回调到<code>NativeInputEventReceiver.handleEvent()</code>。</p>
+<h2 id="InputDispatcher通过服务端InputChannel发送触摸事件"><a href="#InputDispatcher通过服务端InputChannel发送触摸事件" class="headerlink" title="InputDispatcher通过服务端InputChannel发送触摸事件"></a>InputDispatcher通过服务端InputChannel发送触摸事件</h2><p>上面我们知道了客户端会通过<code>Looper</code>不断处理<code>NativeMessageQueue</code>中的消息，那触摸事件的消息是如何发送到<code>NativeMessageQueue</code>的呢？其实触摸原始事件是通过建立好的<code>InputChannel.sendMessage()</code>来发送的:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">status_t InputChannel::sendMessage(const InputMessage* msg) &#123;</span><br><span class="line">    size_t msgLength &#x3D; msg-&gt;size();</span><br><span class="line">    ssize_t nWrite;</span><br><span class="line">    do &#123;</span><br><span class="line">        nWrite &#x3D; ::send(mFd, msg, msgLength, MSG_DONTWAIT | MSG_NOSIGNAL); &#x2F;&#x2F;向socket中写入数据</span><br><span class="line">    &#125; while (nWrite &#x3D;&#x3D; -1 &amp;&amp; errno &#x3D;&#x3D; EINTR);</span><br><span class="line">	...</span><br><span class="line">    return OK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法是<code>InputDispatcher</code>调用的。上面<code>pollInner</code>会因为<code>InputChannel.sendMessage()</code>发送的数据而被唤醒。进而调用request中的<code>NativeInputEventReceiver</code>的<code>handleEvent()</code>方法，参数就是我们接收到的事件信息与数据。</p>
+<p>上面整个过程可以用下图表示:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6InputChannel%E7%9A%84%E9%80%9A%E4%BF%A1.png" alt=""></p>
+<p><strong>其实上面整个过程是利用<code>Socket</code>完成了数据的跨进程通信（InputDispatcher-&gt;NativeMessageQueue）。<code>Socket</code>的<code>阻塞/通知机制</code>在这里是十分高效的。<code>NativeMessageQueue/Looper</code>的主要作用是监听<code>InputDispatcher</code>给<code>服务端InputChannel</code>发送的触摸数据。然后把这些数据通过<code>NativeInputEventReceiver.handleEvent()</code>回调到客户端。</strong></p>
+<h2 id="NativeInputEventReceiver-handleEvent"><a href="#NativeInputEventReceiver-handleEvent" class="headerlink" title="NativeInputEventReceiver.handleEvent()"></a>NativeInputEventReceiver.handleEvent()</h2><blockquote>
+<p>android_view_NativeInputEventReceiver.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">int NativeInputEventReceiver::handleEvent(int receiveFd, int events, void* data) &#123;</span><br><span class="line"> 	...</span><br><span class="line">    if (events &amp; ALOOPER_EVENT_INPUT) &#123;</span><br><span class="line">        JNIEnv* env &#x3D; AndroidRuntime::getJNIEnv();</span><br><span class="line">        status_t status &#x3D; consumeEvents(env, false &#x2F;*consumeBatches*&#x2F;, -1, NULL);</span><br><span class="line">        mMessageQueue-&gt;raiseAndClearException(env, &quot;handleReceiveCallback&quot;);</span><br><span class="line">        return status &#x3D;&#x3D; OK || status &#x3D;&#x3D; NO_MEMORY ? 1 : 0;</span><br><span class="line">    &#125;</span><br><span class="line">	...</span><br><span class="line">    return 1;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即主要通过<code>consumeEvents()</code>来处理这个事件:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">status_t NativeInputEventReceiver::consumeEvents(JNIEnv* env,...) </span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    InputEvent* inputEvent;</span><br><span class="line">    status_t status &#x3D; mInputConsumer.consume(&amp;mInputEventFactory,consumeBatches, frameTime, &amp;seq, &amp;inputEvent);</span><br><span class="line"></span><br><span class="line">    jobject inputEventObj;</span><br><span class="line">    ...</span><br><span class="line">    switch (inputEvent-&gt;getType()) &#123;</span><br><span class="line">        ...</span><br><span class="line">        case AINPUT_EVENT_TYPE_MOTION: &#123;</span><br><span class="line">            MotionEvent* motionEvent &#x3D; static_cast&lt;MotionEvent*&gt;(inputEvent); &#x2F;&#x2F; MotionEvent的产生</span><br><span class="line">            inputEventObj &#x3D; android_view_MotionEvent_obtainAsCopy(env, motionEvent);</span><br><span class="line">            break;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if (inputEventObj) &#123;</span><br><span class="line">        env-&gt;CallVoidMethod(receiverObj.get(),</span><br><span class="line">                gInputEventReceiverClassInfo.dispatchInputEvent, seq, inputEventObj,</span><br><span class="line">                displayId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法的主要处理是:</p>
+<ol>
+<li><code>mInputConsumer.consume()</code>会调用到<code>mChannel-&gt;receiveMessage(&amp;mMsg);</code>,<code>mChannel</code>其实就是<code>客户端InputChannel</code>，它通过<code>socket</code>接收<code>服务端InputChannel</code>的消息。这个消息其实就是触摸事件。</li>
+<li>产生<code>MotionEvent</code>对象<code>inputEventObj</code>,这个对象可以通过<code>jni</code>调用</li>
+<li>调用<code>jni</code>方法<code>gInputEventReceiverClassInfo.dispatchInputEvent()</code></li>
+</ol>
+<p>其实<code>gInputEventReceiverClassInfo.dispatchInputEvent()</code>最终调用到java层<code>InputEventReceiver.dispatchInputEvent()</code>, 这个方法是java层分发触摸事件的开始。</p>
+<h2 id="InputEventReceiver的dispatchInputEvent"><a href="#InputEventReceiver的dispatchInputEvent" class="headerlink" title="InputEventReceiver的dispatchInputEvent()"></a>InputEventReceiver的dispatchInputEvent()</h2><blockquote>
+<p>InputEventReceiver.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">private void dispatchInputEvent(int seq, InputEvent event) &#123;</span><br><span class="line">    mSeqMap.put(event.getSequenceNumber(), seq);</span><br><span class="line">    onInputEvent(event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>InputEventReceiver</code>是一个抽象类，它在java层的实现是<code>ViewRootImpl.WindowInputEventReceiver</code>,它复写了<code>onInputEvent()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public void onInputEvent(InputEvent event) &#123;</span><br><span class="line">    enqueueInputEvent(event, this, 0, true);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>enqueueInputEvent()</code>最终会调用<code>deliverInputEvent()</code>处理事件:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">private void deliverInputEvent(QueuedInputEvent q) &#123;</span><br><span class="line">    ...</span><br><span class="line">    InputStage stage;</span><br><span class="line">    if (q.shouldSendToSynthesizer()) &#123;</span><br><span class="line">        stage &#x3D; mSyntheticInputStage;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        stage &#x3D; q.shouldSkipIme() ? mFirstPostImeInputStage : mFirstInputStage;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if (stage !&#x3D; null) &#123;</span><br><span class="line">        stage.deliver(q);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        finishInputEvent(q);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>InputStage</code>可以理解为处理事件过程中的一步，多个<code>InputStage</code>可以组成一个处理流程，他们的组织形式类似于一个链表。看一下它的类组成应该就能猜到个大概逻辑:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">abstract class InputStage &#123;</span><br><span class="line">    private final InputStage mNext;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    protected void onDeliverToNext(QueuedInputEvent q) &#123;</span><br><span class="line">        if (mNext !&#x3D; null) &#123;</span><br><span class="line">            mNext.deliver(q);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            finishInputEvent(q);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    protected int onProcess(QueuedInputEvent q) &#123;</span><br><span class="line">        return FORWARD;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>事件<code>QueuedInputEvent</code>最终会由<code>ViewPostImeInputStage</code>处理,它的<code>onProcess()</code>会调用到<code>processPointerEvent</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">private int processPointerEvent(QueuedInputEvent q) &#123;</span><br><span class="line">    final MotionEvent event &#x3D; (MotionEvent)q.mEvent;</span><br><span class="line"></span><br><span class="line">    final View eventTarget &#x3D; (event.isFromSource(InputDevice.SOURCE_MOUSE) &amp;&amp; mCapturingView !&#x3D; null) ? mCapturingView : mView;</span><br><span class="line"></span><br><span class="line">    boolean handled &#x3D; eventTarget.dispatchPointerEvent(event);</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里的<code>eventTarget(View)</code>其实就是<code>DecorView</code>,即回调到了<code>DecorView.dispatchPointerEvent()</code>:</p>
+<blockquote>
+<p>View.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public final boolean dispatchPointerEvent(MotionEvent event) &#123;</span><br><span class="line">    if (event.isTouchEvent()) &#123;</span><br><span class="line">        return dispatchTouchEvent(event);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        return dispatchGenericMotionEvent(event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>DecorView.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">public boolean dispatchTouchEvent(MotionEvent ev) &#123;</span><br><span class="line">    final Window.Callback cb &#x3D; mWindow.getCallback();</span><br><span class="line">    return cb !&#x3D; null &amp;&amp; !mWindow.isDestroyed() &amp;&amp; mFeatureId &lt; 0 ? cb.dispatchTouchEvent(ev) : super.dispatchTouchEvent(ev);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里的<code>Window.Callback</code>其实就是<code>Activity</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">public class Activity extends ContextThemeWrapper implements Window.Callback,...&#123;</span><br></pre></td></tr></table></figure>
+
+<p>即回调到<code>Activity.dispatchTouchEvent()</code>。到这里就回到的我们常分析<code>Android事件分发机制</code>。这些内容会在下一篇文章来看一下。</p>
+<p><strong>本文内容参考自以下文章,感谢这些作者的细致分析</strong>:</p>
+<p><a href="https://www.viseator.com/2017/09/14/android_view_event_1/" target="_blank" rel="noopener">Android 触摸事件分发机制（一）从内核到应用 一切的开始</a></p>
+<p><a href="https://www.viseator.com/2017/10/07/android_view_event_2/" target="_blank" rel="noopener">Android 触摸事件分发机制（二）原始事件消息传递与分发的开始</a></p>
+<p><a href="http://gityuan.com/2016/12/31/input-ipc/" target="_blank" rel="noopener">Input系统—事件处理全过程</a></p>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    ContentProvider启动过程分析
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">View事件传递机制源码走查</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

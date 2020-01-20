@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>RecyclerView动画源码浅析 | susion</title>
+    
+    
+        <meta name="keywords" content="RecyclerView动画源码浅析" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="本文主要分析RecyclerView删除动画的实现原理,不同类型动画的大体实现流程其实都是差不多的，所以对于添加、交换这种动画就不再做分析。本文主要目标是理解清楚的是RecyclerViewItem删除动画源码实现逻辑。文章比较长。 可以通过下面这两个方法触发RecyclerView的删除动画: 12345678&#x2F;&#x2F;一个item的删除动画dataSource.removeAt(">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RecyclerView动画源码浅析">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="本文主要分析RecyclerView删除动画的实现原理,不同类型动画的大体实现流程其实都是差不多的，所以对于添加、交换这种动画就不再做分析。本文主要目标是理解清楚的是RecyclerViewItem删除动画源码实现逻辑。文章比较长。 可以通过下面这两个方法触发RecyclerView的删除动画: 12345678&#x2F;&#x2F;一个item的删除动画dataSource.removeAt(">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/RecyclerViewRemoveAnimation.gif">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/Remove%E5%8A%A8%E7%94%BBdispatchLayoutStep1.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/Remove%E5%8A%A8%E7%94%BB%E5%B8%83%E5%B1%80.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/DefaultItemAnimator.animateMove.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/RecyclerViewRemoveAnimation.gif">
+<meta property="article:published_time" content="2019-02-28T03:09:02.655Z">
+<meta property="article:modified_time" content="2020-01-20T11:40:14.683Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/RecyclerViewRemoveAnimation.gif">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/framework/RecyclerView动画源码浅析" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/">framework</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">
+            <time datetime="2019-02-28T03:09:02.655Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            RecyclerView动画源码浅析
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <p>本文主要分析<code>RecyclerView删除动画</code>的实现原理,不同类型动画的大体实现流程其实都是差不多的，所以对于添加、交换这种动画就不再做分析。本文主要目标是<strong>理解清楚的是<code>RecyclerViewItem删除动画</code>源码实现逻辑</strong>。文章比较长。</p>
+<p>可以通过下面这两个方法触发<code>RecyclerView</code>的删除动画:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;一个item的删除动画</span><br><span class="line">dataSource.removeAt(1)</span><br><span class="line">recyclerView.adapter.notifyItemRemoved(1)</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;多个item的删除动画</span><br><span class="line">dataSource.removeAt(1)</span><br><span class="line">dataSource.removeAt(1)</span><br><span class="line">recyclerView.adapter.notifyItemRangeRemoved(1,2)</span><br></pre></td></tr></table></figure>
+
+<p>下面这个图是设置10倍动画时长时删除动画的执行效果,可以先预想一下这个动画时大致可以怎么实现:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/RecyclerViewRemoveAnimation.gif" alt=""></p>
+<p>接下来就结合前面几篇文章的内容并跟随源码来一块看一下<code>RecyclerView</code>是如何实现这个动画的:</p>
+<p><code>adapter.notifyItemRemoved(1)</code>会回调到<code>RecyclerViewDataObserver</code>: </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public void onItemRangeRemoved(int positionStart, int itemCount) &#123;</span><br><span class="line">    if (mAdapterHelper.onItemRangeRemoved(positionStart, itemCount)) &#123;</span><br><span class="line">        triggerUpdateProcessor();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其实按照<code>onItemRangeRemoved()</code>这个方法可以将<code>Item删除动画</code>分为两个部分:</p>
+<ol>
+<li>添加一个<code>UpdateOp</code>到<code>AdapterHelper.mPendingUpdates</code>中。</li>
+<li><code>triggerUpdateProcessor()</code>调用了<code>requestLayout</code>, 即触发了<code>RecyclerView</code>的重新布局。</li>
+</ol>
+<p>先来看<code>mAdapterHelper.onItemRangeRemoved(positionStart, itemCount)</code>:</p>
+<h2 id="AdapterHelper"><a href="#AdapterHelper" class="headerlink" title="AdapterHelper"></a>AdapterHelper</h2><p>这个类可以理解为是用来记录<code>adapter.notifyXXX</code>动作的，即每一个<code>Operation(添加、删除)</code>都会在这个类中有一个对应记录<code>UpdateOp</code>，<code>RecyclerView</code>在布局时会检查这些<code>UpdateOp</code>，并做对应的操作。<br><code>mAdapterHelper.onItemRangeRemoved</code>其实是添加一个<code>Remove UpdateOp</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mPendingUpdates.add(obtainUpdateOp(UpdateOp.REMOVE, positionStart, itemCount, null));</span><br><span class="line">mExistingUpdateTypes |&#x3D; UpdateOp.REMOVE;</span><br></pre></td></tr></table></figure>
+<p>即把一个<code>Remove UpdateOp</code>添加到了<code>mPendingUpdates</code>集合中。</p>
+<h2 id="RecyclerView-layout"><a href="#RecyclerView-layout" class="headerlink" title="RecyclerView.layout"></a>RecyclerView.layout</h2><p>在<a href="RecyclerView的刷新机制.md">RecyclerView的刷新机制</a>中知道<code>RecyclerView</code>的布局一共分为3分步骤:<code>dispatchLayoutStep1()、dispatchLayoutStep2()、dispatchLayoutStep3()</code>，接下来我们就分析这3步中有关<code>Item删除动画</code><br>的工作。</p>
+<h3 id="dispatchLayoutStep1-保存动画现场"><a href="#dispatchLayoutStep1-保存动画现场" class="headerlink" title="dispatchLayoutStep1(保存动画现场)"></a>dispatchLayoutStep1(保存动画现场)</h3><p>直接从<code>dispatchLayoutStep1()</code>开始看，这个方法是<code>RecyclerView</code>布局的第一步:</p>
+<blockquote>
+<p>dispatchLayoutStep1():</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">private void dispatchLayoutStep1() &#123;</span><br><span class="line">    ...</span><br><span class="line">    processAdapterUpdatesAndSetAnimationFlags();</span><br><span class="line">    ...</span><br><span class="line">    if (mState.mRunSimpleAnimations) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面我只贴出了<code>Item删除动画</code>主要涉及到的部分, 先来看一下<code>processAdapterUpdatesAndSetAnimationFlags()</code>所触发的操作，整个操作链比较长，就不一一跟了，它最终其实是调用到<code>AdapterHelper.postponeAndUpdateViewHolders()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">private void postponeAndUpdateViewHolders(UpdateOp op) &#123;</span><br><span class="line">    mPostponedList.add(op); &#x2F;&#x2F;op其实是从mPendingUpdates中取出来的</span><br><span class="line">    switch (op.cmd) &#123;</span><br><span class="line">        case UpdateOp.ADD:</span><br><span class="line">            mCallback.offsetPositionsForAdd(op.positionStart, op.itemCount); break;</span><br><span class="line">        case UpdateOp.MOVE:</span><br><span class="line">            mCallback.offsetPositionsForMove(op.positionStart, op.itemCount); break;</span><br><span class="line">        case UpdateOp.REMOVE:</span><br><span class="line">            mCallback.offsetPositionsForRemovingLaidOutOrNewView(op.positionStart, op.itemCount); break;  </span><br><span class="line">        case UpdateOp.UPDATE:</span><br><span class="line">            mCallback.markViewHoldersUpdated(op.positionStart, op.itemCount, op.payload); break;    </span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即这个方法做的事情就是把<code>mPendingUpdates中的UpdateOp</code>添加到<code>mPostponedList</code>中，并回调根据<code>op.cmd</code>来回调<code>mCallback</code>,其实这个<code>mCallback</code>是回调到了<code>RecyclerView</code>中:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">void offsetPositionRecordsForRemove(int positionStart, int itemCount, boolean applyToPreLayout) &#123;</span><br><span class="line">       final int positionEnd &#x3D; positionStart + itemCount;</span><br><span class="line">       final int childCount &#x3D; mChildHelper.getUnfilteredChildCount();</span><br><span class="line">       for (int i &#x3D; 0; i &lt; childCount; i++) &#123;</span><br><span class="line">           final ViewHolder holder &#x3D; getChildViewHolderInt(mChildHelper.getUnfilteredChildAt(i));</span><br><span class="line">           ...</span><br><span class="line">           if (holder.mPosition &gt;&#x3D; positionEnd) &#123;</span><br><span class="line">               holder.offsetPosition(-itemCount, applyToPreLayout);</span><br><span class="line">               mState.mStructureChanged &#x3D; true;</span><br><span class="line">           &#125;</span><br><span class="line">           ...</span><br><span class="line">       &#125;</span><br><span class="line">       ...</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>offsetPositionRecordsForRemove</code>方法:<strong>主要是把当前显示在界面上的<code>ViewHolder</code>的位置做对应的改变，即如果item位于删除的item之后，那么它的位置应该减一</strong>，比如原来的位置是3现在变成了2。</p>
+<p>接下来继续看<code>dispatchLayoutStep1()</code>中的操作:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">if (mState.mRunSimpleAnimations) &#123;</span><br><span class="line">    int count &#x3D; mChildHelper.getChildCount();</span><br><span class="line">    for (int i &#x3D; 0; i &lt; count; ++i) &#123;</span><br><span class="line">        final ViewHolder holder &#x3D; getChildViewHolderInt(mChildHelper.getChildAt(i));</span><br><span class="line">        &#x2F;&#x2F;根据当前的显示在界面上的ViewHolder的布局信息创建一个ItemHolderInfo</span><br><span class="line">        final ItemHolderInfo animationInfo &#x3D; mItemAnimator</span><br><span class="line">                .recordPreLayoutInformation(mState, holder,</span><br><span class="line">                        ItemAnimator.buildAdapterChangeFlagsForAnimations(holder),</span><br><span class="line">                        holder.getUnmodifiedPayloads());</span><br><span class="line">        mViewInfoStore.addToPreLayout(holder, animationInfo); &#x2F;&#x2F;把 holder对应的animationInfo保存到 mViewInfoStore中</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即就做了两件事:</p>
+<ol>
+<li>为当前显示在界面上的每一个<code>ViewHolder</code>创建一个<code>ItemHolderInfo</code>，<code>ItemHolderInfo</code>其实就是保存了当前显示<code>itemview</code>的布局的<code>top、left</code>等信息</li>
+<li>拿着<code>ViewHolder</code>和其对应的<code>ItemHolderInfo</code>调用<code>mViewInfoStore.addToPreLayout(holder, animationInfo)</code>。 </li>
+</ol>
+<p><code>mViewInfoStore.addToPreLayout()</code>就是把这些信息保存起来:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">void addToPreLayout(RecyclerView.ViewHolder holder, RecyclerView.ItemAnimator.ItemHolderInfo info) &#123;</span><br><span class="line">    InfoRecord record &#x3D; mLayoutHolderMap.get(holder);</span><br><span class="line">    if (record &#x3D;&#x3D; null) &#123;</span><br><span class="line">        record &#x3D; InfoRecord.obtain();</span><br><span class="line">        mLayoutHolderMap.put(holder, record);</span><br><span class="line">    &#125;</span><br><span class="line">    record.preInfo &#x3D; info;</span><br><span class="line">    record.flags |&#x3D; FLAG_PRE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即把<code>holder 和 info</code>保存到<code>mLayoutHolderMap</code>中。可以理解为它是<strong>用来保存动画执行前当前界面ViewHolder的信息</strong>一个集合。</p>
+<p>到这里大致理完了在执行<code>Items删除动画</code>时<code>AdapterHelper</code>和<code>dispatchLayoutStep1()</code>的执行逻辑，这里用一张图来总结一下:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/Remove%E5%8A%A8%E7%94%BBdispatchLayoutStep1.png" alt=""></p>
+<p>其实这些操作可以简单的理解为<strong>保存动画前View的现场</strong> 。其实这里有一次<em>预布局</em>,预布局也是为了保存动画前的View信息,不过这里就不讲了。</p>
+<h2 id="dispatchLayoutStep2"><a href="#dispatchLayoutStep2" class="headerlink" title="dispatchLayoutStep2"></a>dispatchLayoutStep2</h2><p>这一步就是摆放当前<code>adapter</code>中剩余的Item，在本文的例子中，就是依次摆放剩余的5个Item。在前面的文章<code>RecyclerView的刷新机制</code>中，我们知道<code>LinearLayoutManager</code>会向<code>Recycler</code>要<code>View</code>来填充<code>RecyclerView</code>,所以<code>RecyclerView</code>中填几个<code>View</code>，其实和<code>Recycler</code>有很大的关系，因为<code>Recycler</code>不给<code>LinearLayoutManager</code>的话，<code>RecyclerView</code>中就不会有<code>View</code>填充。那<code>Recycler</code>给<code>LinearLayoutManager``View</code>的边界条件是什么呢？<br>我们来看一下<code>tryGetViewHolderForPositionByDeadline()</code>方法:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ViewHolder tryGetViewHolderForPositionByDeadline(int position, boolean dryRun, long deadlineNs) &#123;</span><br><span class="line">        if (position &lt; 0 || position &gt;&#x3D; mState.getItemCount()) &#123;</span><br><span class="line">            throw new IndexOutOfBoundsException(&quot;Invalid item position &quot; + position</span><br><span class="line">                    + &quot;(&quot; + position + &quot;). Item count:&quot; + mState.getItemCount()</span><br><span class="line">                    + exceptionLabel());</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即如果位置大于<code>mState.getItemCount()</code>,那么就不会再向<code>RecyclerView</code>中填充子View。而这个<code>mState.getItemCount()</code>一般就是<code>adapter</code>中当前数据源的数量。所以经过这一步布局后，View的状态如下图:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/Remove%E5%8A%A8%E7%94%BB%E5%B8%83%E5%B1%80.png" alt=""></p>
+<p>这时你可能就有疑问了？ 动画呢？ 怎么直接成最终的模样了？别急，这一步只不过是布局，至于动画是怎么执行的我们继续往下看:</p>
+<h2 id="dispatchLayoutStep3-执行删除动画"><a href="#dispatchLayoutStep3-执行删除动画" class="headerlink" title="dispatchLayoutStep3(执行删除动画)"></a>dispatchLayoutStep3(执行删除动画)</h2><p>在上一步中对删除操作已经完成了布局，接下来<code>dispatchLayoutStep3()</code>就会做删除动画:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">private void dispatchLayoutStep3() &#123;</span><br><span class="line">    ...</span><br><span class="line">    if (mState.mRunSimpleAnimations) &#123;</span><br><span class="line">        ...</span><br><span class="line">        mViewInfoStore.process(mViewInfoProcessCallback); &#x2F;&#x2F;触发动画的执行</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到主要涉及到动画的是<code>mViewInfoStore.process()</code>, 其实这一步可以分为两个操作:</p>
+<ol>
+<li>先把<code>Item View</code>动画前的起始状态准备好</li>
+<li>执行动画使<code>Item View</code>到目标布局位置</li>
+</ol>
+<p>下面我们来继续跟一下<code>mViewInfoStore.process()</code>这个方法</p>
+<h3 id="把Item-View动画前的起始状态准备好"><a href="#把Item-View动画前的起始状态准备好" class="headerlink" title="把Item View动画前的起始状态准备好"></a>把<code>Item View</code>动画前的起始状态准备好</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">void process(ProcessCallback callback) &#123;</span><br><span class="line">       for (int index &#x3D; mLayoutHolderMap.size() - 1; index &gt;&#x3D; 0; index--) &#123; &#x2F;&#x2F;对mLayoutHolderMap中每一个Holder执行动画</span><br><span class="line">           final RecyclerView.ViewHolder viewHolder &#x3D; mLayoutHolderMap.keyAt(index);</span><br><span class="line">           final InfoRecord record &#x3D; mLayoutHolderMap.removeAt(index);</span><br><span class="line">           if ((record.flags &amp; FLAG_APPEAR_AND_DISAPPEAR) &#x3D;&#x3D; FLAG_APPEAR_AND_DISAPPEAR) &#123;</span><br><span class="line">               callback.unused(viewHolder);</span><br><span class="line">           &#125; else if ((record.flags &amp; FLAG_DISAPPEARED) !&#x3D; 0) &#123;</span><br><span class="line">               callback.processDisappeared(viewHolder, record.preInfo, record.postInfo);  &#x2F;&#x2F;被删除的那个item会回调到这个地方</span><br><span class="line">           &#125;else if ((record.flags &amp; FLAG_PRE_AND_POST) &#x3D;&#x3D; FLAG_PRE_AND_POST) &#123;</span><br><span class="line">               callback.processPersistent(viewHolder, record.preInfo, record.postInfo);   &#x2F;&#x2F;需要上移的item会回调到这个地方</span><br><span class="line">           &#125;  </span><br><span class="line">           ...</span><br><span class="line">           InfoRecord.recycle(record);</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这一步就是遍历<code>mLayoutHolderMap</code>对其中的每一个ViewHolder做对应的动画。这里<code>callback</code>会调到了<code>RecyclerView</code>,<code>RecyclerView</code>会对每一个<code>Item</code>执行相应的动画:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">ViewInfoStore.ProcessCallback mViewInfoProcessCallback &#x3D;</span><br><span class="line">        new ViewInfoStore.ProcessCallback() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void processDisappeared(ViewHolder viewHolder, @NonNull ItemHolderInfo info,@Nullable ItemHolderInfo postInfo) &#123;</span><br><span class="line">                mRecycler.unscrapView(viewHolder);   &#x2F;&#x2F;从scrap集合中移除,</span><br><span class="line">                animateDisappearance(viewHolder, info, postInfo);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            @Override</span><br><span class="line">            public void processPersistent(ViewHolder viewHolder, @NonNull ItemHolderInfo preInfo, @NonNull ItemHolderInfo postInfo) &#123;</span><br><span class="line">                ...</span><br><span class="line">                if (mItemAnimator.animatePersistence(viewHolder, preInfo, postInfo)) &#123;</span><br><span class="line">                    postAnimationRunner();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            ...</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>先来分析被删除那那个<code>Item</code>的消失动画:</p>
+<h4 id="将Item的动画消失动画放入到mPendingRemovals待执行队列"><a href="#将Item的动画消失动画放入到mPendingRemovals待执行队列" class="headerlink" title="将Item的动画消失动画放入到mPendingRemovals待执行队列"></a>将Item的动画消失动画放入到<code>mPendingRemovals</code>待执行队列</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">void animateDisappearance(@NonNull ViewHolder holder, @NonNull ItemHolderInfo preLayoutInfo, @Nullable ItemHolderInfo postLayoutInfo) &#123;</span><br><span class="line">    addAnimatingView(holder);</span><br><span class="line">    holder.setIsRecyclable(false);</span><br><span class="line">    if (mItemAnimator.animateDisappearance(holder, preLayoutInfo, postLayoutInfo)) &#123;</span><br><span class="line">        postAnimationRunner();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>先把<code>Holder</code>attch到<code>RecyclerView</code>上(这是因为在<code>dispatchLayoutStep1</code>和<code>dispatchLayoutStep2</code>中已经对这个<code>Holder</code>做了Dettach)。即它又重新出现在了<code>RecyclerView</code>的布局中(位置当然还是未删除前的位置)。然后调用了<code>mItemAnimator.animateDisappearance()</code>其执行这个删除动画，<code>mItemAnimator</code>是<code>RecyclerView</code>的动画实现者，它对应的是<code>DefaultItemAnimator</code>。继续看<code>animateDisappearance()</code>它其实最终调用到了<code>DefaultItemAnimator.animateRemove()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public boolean animateRemove(final RecyclerView.ViewHolder holder) &#123;</span><br><span class="line">    resetAnimation(holder);</span><br><span class="line">    mPendingRemovals.add(holder);</span><br><span class="line">    return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即，其实并没有执行动画，而是把这个<code>holder</code>放入了<code>mPendingRemovals</code>集合中，看样是要等下执行。</p>
+<h3 id="将未被删除的Item的移动动画放入到mPendingMoves待执行队列"><a href="#将未被删除的Item的移动动画放入到mPendingMoves待执行队列" class="headerlink" title="将未被删除的Item的移动动画放入到mPendingMoves待执行队列"></a>将未被删除的Item的移动动画放入到<code>mPendingMoves</code>待执行队列</h3><p>其实逻辑和上面差不多<code>DefaultItemAnimator.animatePersistence()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public boolean animatePersistence(@NonNull RecyclerView.ViewHolder viewHolder,@NonNull ItemHolderInfo preInfo, @NonNull ItemHolderInfo postInfo) &#123;</span><br><span class="line">    if (preInfo.left !&#x3D; postInfo.left || preInfo.top !&#x3D; postInfo.top) &#123;  &#x2F;&#x2F;和预布局的状态不同，则执行move动画</span><br><span class="line">        return animateMove(viewHolder,preInfo.left, preInfo.top, postInfo.left, postInfo.top);</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>animateMove</code>的逻辑也很简单，就是根据偏移构造了一个<code>MoveInfo</code>然后添加到<code>mPendingMoves</code>中，也没有立刻执行:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">public boolean animateMove(final RecyclerView.ViewHolder holder, int fromX, int fromY, int toX, int toY) &#123;</span><br><span class="line">    final View view &#x3D; holder.itemView;</span><br><span class="line">    fromX +&#x3D; (int) holder.itemView.getTranslationX();</span><br><span class="line">    fromY +&#x3D; (int) holder.itemView.getTranslationY();</span><br><span class="line">    resetAnimation(holder);</span><br><span class="line">    int deltaX &#x3D; toX - fromX;</span><br><span class="line">    int deltaY &#x3D; toY - fromY;</span><br><span class="line">    if (deltaX &#x3D;&#x3D; 0 &amp;&amp; deltaY &#x3D;&#x3D; 0) &#123;</span><br><span class="line">        dispatchMoveFinished(holder);</span><br><span class="line">        return false;</span><br><span class="line">    &#125;</span><br><span class="line">    if (deltaX !&#x3D; 0) &#123;</span><br><span class="line">        view.setTranslationX(-deltaX);  &#x2F;&#x2F;设置他们的位置为负偏移！！！！！</span><br><span class="line">    &#125;</span><br><span class="line">    if (deltaY !&#x3D; 0) &#123;</span><br><span class="line">        view.setTranslationY(-deltaY);  &#x2F;&#x2F;设置他们的位置为负偏移！！！！！</span><br><span class="line">    &#125;</span><br><span class="line">    mPendingMoves.add(new MoveInfo(holder, fromX, fromY, toX, toY));</span><br><span class="line">    return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但要注意这一步把要做滚动动画的View的<code>TranslationX</code>和<code>TranslationY</code>都设置负的被删除的Item的高度，如下图</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/DefaultItemAnimator.animateMove.png" alt=""></p>
+<p><strong>即被删除的Item之后的Item都下移了</strong></p>
+<h3 id="postAnimationRunner-执行所有的pending动画"><a href="#postAnimationRunner-执行所有的pending动画" class="headerlink" title="postAnimationRunner()执行所有的pending动画"></a><code>postAnimationRunner()</code>执行所有的pending动画</h3><p>上面一步操作已经把动画前的状态准备好了，<code>postAnimationRunner()</code>就是将上面<code>pendding</code>的动画开始执行:</p>
+<p>//DefaultItemAnimator.java</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">public void runPendingAnimations() &#123;</span><br><span class="line">    boolean removalsPending &#x3D; !mPendingRemovals.isEmpty();</span><br><span class="line">    ...</span><br><span class="line">    for (RecyclerView.ViewHolder holder : mPendingRemovals) &#123;</span><br><span class="line">        animateRemoveImpl(holder); &#x2F;&#x2F;执行pending的删除动画</span><br><span class="line">    &#125;</span><br><span class="line">    mPendingRemovals.clear();</span><br><span class="line"></span><br><span class="line">    if (!mPendingMoves.isEmpty()) &#123; &#x2F;&#x2F;执行pending的move动画</span><br><span class="line">        final ArrayList&lt;MoveInfo&gt; moves &#x3D; new ArrayList&lt;&gt;();</span><br><span class="line">        moves.addAll(mPendingMoves);</span><br><span class="line">        mMovesList.add(moves);</span><br><span class="line">        mPendingMoves.clear();</span><br><span class="line">        Runnable mover &#x3D; new Runnable() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void run() &#123;</span><br><span class="line">                for (MoveInfo moveInfo : moves) &#123;</span><br><span class="line">                    animateMoveImpl(moveInfo.holder, moveInfo.fromX, moveInfo.fromY,</span><br><span class="line">                            moveInfo.toX, moveInfo.toY);</span><br><span class="line">                &#125;</span><br><span class="line">                moves.clear();</span><br><span class="line">                mMovesList.remove(moves);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        if (removalsPending) &#123;</span><br><span class="line">            View view &#x3D; moves.get(0).holder.itemView;</span><br><span class="line">            ViewCompat.postOnAnimationDelayed(view, mover, getRemoveDuration());</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            mover.run();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>至于<code>animateRemoveImpl</code>和<code>animateMoveImpl</code>的源码具体我就不贴了，直接说一下它们做了什么操作吧:</p>
+<ol>
+<li><code>animateRemoveImpl</code> 把这个被Remove的Item做一个透明度由（1~0）的动画</li>
+<li><code>animateMoveImpl</code>把它们的<code>TranslationX</code>和<code>TranslationY</code>移动到0的位置。</li>
+</ol>
+<p>我再贴一下删除动画的gif， 你感受一下是不是这个执行步骤:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/recyclerview/RecyclerViewRemoveAnimation.gif" alt=""></p>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    RecyclerView的复用机制
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">ContentProvider启动过程分析</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

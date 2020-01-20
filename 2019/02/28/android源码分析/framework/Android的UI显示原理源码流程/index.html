@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>Android的UI显示原理源码流程 | susion</title>
+    
+    
+        <meta name="keywords" content="Android的UI显示原理源码流程" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="本文仅是源码流程跟踪的一个索引过程，比较乱，后续我会基于这篇文章仔细整理。  上一篇文章深入剖析Window组成了解到Android应用程序的UI组成结构。并且知道windowManager.addView(view, layoutParams)可以算是添加了一个理论上的Window，那这个Window在WindowManagerService中的添加逻辑是什么？都做了什么？本文主要跟随源码来理一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android的UI显示原理源码流程">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="本文仅是源码流程跟踪的一个索引过程，比较乱，后续我会基于这篇文章仔细整理。  上一篇文章深入剖析Window组成了解到Android应用程序的UI组成结构。并且知道windowManager.addView(view, layoutParams)可以算是添加了一个理论上的Window，那这个Window在WindowManagerService中的添加逻辑是什么？都做了什么？本文主要跟随源码来理一">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2019-02-28T03:09:02.369Z">
+<meta property="article:modified_time" content="2020-01-20T07:31:40.782Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/framework/Android的UI显示原理源码流程" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/">framework</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">
+            <time datetime="2019-02-28T03:09:02.369Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Android的UI显示原理源码流程
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <p>本文仅是源码流程跟踪的一个索引过程，比较乱，后续我会基于这篇文章仔细整理。</p>
+<blockquote>
+<p>上一篇文章<a href="深入剖析Window组成.md">深入剖析Window组成</a>了解到Android应用程序的<code>UI组成结构</code>。并且知道<code>windowManager.addView(view, layoutParams)</code>可以算是添加了一个理论上的<code>Window</code>，那这个<code>Window</code>在<code>WindowManagerService</code>中的添加逻辑是什么？都做了什么？本文主要跟随源码来理一下系统的处理逻辑，只求弄清楚一些关键步骤，并不做深究。<code>SurfaceFlinger</code>还是比较复杂的，有兴趣的同学可以按照本文的逻辑去仔细研究一下源码。本文是基于Android8.0以上源码分析的。</p>
+</blockquote>
+<p><code>ViewRootImpl</code>具有应用程序与系统服务<code>WindowManagerService</code>交流的的功能，即可以跨进程通信。<code>windowManager.addView(view, layoutParams)</code>的调用会在应用程序中创建一个<code>ViewRootImpl</code>对象，并调用<code>ViewRootImpl.setView()</code>。这个方法会向<code>WindowManagerService</code>正式发起了<code>Window</code>的添加操作。</p>
+<h1 id="Window在WindowManagerService中的创建逻辑"><a href="#Window在WindowManagerService中的创建逻辑" class="headerlink" title="Window在WindowManagerService中的创建逻辑"></a>Window在WindowManagerService中的创建逻辑</h1><blockquote>
+<p>ViewRootImpl.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">public void setView(View view, WindowManager.LayoutParams attrs, View panelParentView) &#123;</span><br><span class="line">    ...</span><br><span class="line">    &#x2F;&#x2F;mWindowSession是一个aidl，ViewRootImpl利用它来和WindowManagerService交互</span><br><span class="line">    &#x2F;&#x2F;mWindow是一个aidl，WindowManagerService可以利用这个对象与服务端交互</span><br><span class="line">    &#x2F;&#x2F;mAttachInfo可以理解为是一个data bean，可以跨进程传递</span><br><span class="line">    res &#x3D; mWindowSession.addToDisplay(mWindow, mSeq, mWindowAttributes,</span><br><span class="line">            getHostVisibility(), mDisplay.getDisplayId(), mWinFrame,¡</span><br><span class="line">            mAttachInfo.mContentInsets, mAttachInfo.mStableInsets,</span><br><span class="line">            mAttachInfo.mOutsets, mAttachInfo.mDisplayCutout, mInputChannel);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>ViewRootImpl.setView()</code>核心就是调用<code>mWindowSession.addToDisplay()</code>，相关参数的含义在上面已经标注。<code>mWindowSession.addToDisplay()</code>跨进程调用到了<code>WindowManagerService.addWindow()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public int addWindow(Session session, IWindow client...) &#123;</span><br><span class="line">    ...</span><br><span class="line">    &#x2F;&#x2F;WindowState用描述一个Window</span><br><span class="line">    final WindowState win &#x3D; new WindowState(this, session, client, token, parentWindow,</span><br><span class="line">                appOp[0], seq, attrs, viewVisibility, session.mUid,</span><br><span class="line">                session.mCanAddInternalSystemWindow);</span><br><span class="line">    ...</span><br><span class="line">    win.attach();  &#x2F;&#x2F;会创建一个SurfaceSession</span><br><span class="line"></span><br><span class="line">    mWindowMap.put(client.asBinder(), win); &#x2F;&#x2F;mWindowMap是WindowManagerService用来保存当前所有Window新的的集合</span><br><span class="line">    ...</span><br><span class="line">    win.mToken.addWindow(win); &#x2F;&#x2F;一个token下会有多个win state。 其实token与PhoneWindow是一一对应的。</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面这段代码涉及到UI显示原理的是<code>win.attach()</code>。这个方法会调用到<code>Session.windowAddedLocked()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">void windowAddedLocked(String packageName) &#123;</span><br><span class="line">    ...</span><br><span class="line">    if (mSurfaceSession &#x3D;&#x3D; null) &#123; </span><br><span class="line">        ...</span><br><span class="line">        mSurfaceSession &#x3D; new SurfaceSession();</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;SurfaceSession类的构造方法</span><br><span class="line">public final class SurfaceSession &#123;</span><br><span class="line">    private long mNativeClient; &#x2F;&#x2F; SurfaceComposerClient*</span><br><span class="line"></span><br><span class="line">    public SurfaceSession() &#123;</span><br><span class="line">        mNativeClient &#x3D; nativeCreate(); &#x2F;&#x2F;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>nativeCreate()</code>是一个native方法,具体实现位于<code>android_view_SurfaceSession.cpp</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">static jlong nativeCreate(JNIEnv* env, jclass clazz) &#123;</span><br><span class="line">    SurfaceComposerClient* client &#x3D; new SurfaceComposerClient();</span><br><span class="line">    client-&gt;incStrong((void*)nativeCreate);</span><br><span class="line">    return reinterpret_cast&lt;jlong&gt;(client);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即<code>nativeCreate</code>返回了一个<code>SurfaceComposerClient</code>对象的指针。一般一个应用程序只会有一个<code>SurfaceComposerClient</code>对象，应用程序可以使用它来和<code>SurfaceFlinger</code>跨进程通信，那<code>SurfaceComposerClient</code>对象构造时做了什么呢？</p>
+<blockquote>
+<p>SurfaceComposerClient.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;构造函数其实并没有做什么</span><br><span class="line">SurfaceComposerClient::SurfaceComposerClient() : mStatus(NO_INIT)&#123; &#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F;这个方法在第一次使用SurfaceComposerClient的指针的时候会调用</span><br><span class="line">void SurfaceComposerClient::onFirstRef() &#123;</span><br><span class="line">    ....</span><br><span class="line">    sp&lt;ISurfaceComposerClient&gt; conn;</span><br><span class="line">    &#x2F;&#x2F;sf 就是SurfaceFlinger</span><br><span class="line">    conn &#x3D; (rootProducer !&#x3D; nullptr) ? sf-&gt;createScopedConnection(rootProducer) :</span><br><span class="line">            sf-&gt;createConnection();</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即<code>SurfaceComposerClient</code>对象在使用时会调用<code>sf-&gt;createConnection()</code>创建一个<code>ISurfaceComposerClient</code>。它其实是一个<code>aidl</code>对象。它的实例时<code>Clinet</code>。我们看一下它的创建过程<code>SurfaceFlinger.createConnection()</code>:</p>
+<h1 id="SurfaceComposerClient连接到SurfaceFlinger"><a href="#SurfaceComposerClient连接到SurfaceFlinger" class="headerlink" title="SurfaceComposerClient连接到SurfaceFlinger"></a>SurfaceComposerClient连接到SurfaceFlinger</h1><blockquote>
+<p>SurfaceFlinger.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sp&lt;ISurfaceComposerClient&gt; SurfaceFlinger::createConnection() &#123;</span><br><span class="line">    return initClient(new Client(this)); &#x2F;&#x2F;initClient这个方法其实并没有做什么，</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即构造了一个<code>Client</code>对象，<code>Client</code>实现了<code>ISurfaceComposerClient</code>接口。是一个可以跨进程通信的aidl对象。它的构造函数其实并没有做什么特别的事情，先不看了。</p>
+<p>综上所述,<code>ViewRootImpl.setView()</code>所引发的主要操作是:</p>
+<ol>
+<li><code>WindowManagerService</code>创建了一个<code>WindowState</code>。用来表示客户端的一个<code>Window</code></li>
+<li><code>WindowManagerService</code>创建了一个<code>SurfaceSession</code>,<code>SurfaceSession</code>会与<code>SurfaceFlinger</code>构建链接，创建了一个可以跨进程通信的对象<code>Client(ISurfaceComposerClient)</code>,利用它可以和<code>SurfaceFlinger</code>通信。</li>
+</ol>
+<p><strong>一个<code>(ViewRootImpl)Window</code>要想开始渲染UI，必须经过上面这两个步骤，经过上面的步骤才会被<code>WindowManagerService</code>识别，并且具有与<code>SurfaceFlinger</code>通信的能力。</strong></p>
+<h1 id="Surface的创建"><a href="#Surface的创建" class="headerlink" title="Surface的创建"></a>Surface的创建</h1><p>其实<code>ViewRootImpl</code>对象在构造的时候就创建了一个<code>Surface</code>, 但其实并没有做什么逻辑，<code>Surface</code>的构造函数是空的。那<code>Surface</code>到底在什么地方去做一些初始化操作的呢? 其实入口逻辑还是在<code>ViewRootImpl.setView()</code>:</p>
+<blockquote>
+<p>ViewRootImpl.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public void setView(View view, WindowManager.LayoutParams attrs, View panelParentView) &#123;</span><br><span class="line">    ...</span><br><span class="line">    requestLayout(); &#x2F;&#x2F;susion 请求layout。先添加到待渲染队列中  </span><br><span class="line">    ...</span><br><span class="line">    res &#x3D; mWindowSession.addToDisplay(mWindow, ...);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即在与<code>SurfaceFlinger</code>建立连接之前(创建<code>Client(ISurfaceComposerClient)</code>)调用<code>requestLayout()</code>。这个方法会引起整个<code>ViewRootImpl</code>所管理的整个view tree的重新渲染，即走<code>measure/layout/draw</code>三部曲。<br>但是这里就有疑问:</p>
+<p>ViewRootImpl所代表的Window还没有添加到<code>WindowManagerService</code>中，怎么可能进行渲染呢？</p>
+<p>深入看一下这个方法吧:</p>
+<h2 id="ViewRootImpl-requestLayout"><a href="#ViewRootImpl-requestLayout" class="headerlink" title="ViewRootImpl.requestLayout()"></a>ViewRootImpl.requestLayout()</h2><p>它会调用<code>scheduleTraversals()</code>，这个方法的主要逻辑是:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">void scheduleTraversals() &#123;</span><br><span class="line">    ...</span><br><span class="line">    mChoreographer.postCallback(Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即通过<code>mChoreographer(Choreographer)</code>post了一个<code>Choreographer.CALLBACK_TRAVERSAL</code>类型的<code>callback</code>。那<code>Choreographer</code>是什么呢？</p>
+<h2 id="Choreographer"><a href="#Choreographer" class="headerlink" title="Choreographer"></a>Choreographer</h2><p>这个类的详细分析可以看<a href="https://www.jianshu.com/p/996bca12eb1d" target="_blank" rel="noopener">Android Choreographer源码分析</a>一文，我们可以先简单的理解为它是用来同步控制一个<code>ViewRootImpl</code>的UI显示操作。操作一共分为4种:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">CALLBACK_INPUT：输入</span><br><span class="line">CALLBACK_ANIMATION:动画</span><br><span class="line">CALLBACK_TRAVERSAL:遍历，执行measure、layout、draw</span><br><span class="line">CALLBACK_COMMIT：遍历完成的提交操作，用来修正动画启动时间</span><br></pre></td></tr></table></figure>
+
+<p>我们可以通过它所提供的<code>postXXX(type,callback)</code>来触发一个上面这4类动作，Choreographer接收显示系统的时间脉冲(垂直同步信号-VSync信号)，在下一个frame渲染时控制执行这些操作。</p>
+<p>所以前面<code>scheduleTraversals</code>中post的<code>callback(mTraversalRunnable)</code>在什么时候会执行呢？其实是在<code>WindowManagerService</code>链接到<code>SurfaceFlinger</code>后开始执行的。<code>mTraversalRunnable</code>这个callback会调用到<code>ViewRootImpl.performTraversals()</code>,大部分同学可能知道这个方法是一个<code>view tree</code>的<code>measure/layout/draw</code>的控制方法:</p>
+<blockquote>
+<p>ViewRootImpl.java</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">private void performTraversals() &#123;</span><br><span class="line">    finalView host &#x3D; mView; &#x2F;&#x2F;mView是一个Window的根View，对于Activity来说就是DecorView</span><br><span class="line">    ...</span><br><span class="line">    relayoutWindow(params, viewVisibility, insetsPending);</span><br><span class="line">    ...</span><br><span class="line">    performMeasure(childWidthMeasureSpec, childHeightMeasureSpec);</span><br><span class="line">    ...         </span><br><span class="line">    performLayout(lp, mWidth, mHeight);</span><br><span class="line">    ...</span><br><span class="line">    performDraw();</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法巨长，这里我只贴出来本文需要分析的几点，而核心就是<code>relayoutWindow(params, viewVisibility, insetsPending)</code>,它包含了<code>Surface</code>的真正创建逻辑。它会通过IPC调用到<code>WindowManagerService.relayoutWindow()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public int relayoutWindow(Session session, IWindow client....Surface outSurface)&#123;  &#x2F;&#x2F;这个outSurface其实就是ViewRootImpl中的那个Surface</span><br><span class="line">    ...</span><br><span class="line">    result &#x3D; createSurfaceControl(outSurface, result, win, winAnimator);  </span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">private int createSurfaceControl(Surface outSurface, int result, WindowState win,WindowStateAnimator winAnimator) &#123;</span><br><span class="line">    ...</span><br><span class="line">    surfaceController &#x3D; winAnimator.createSurfaceLocked(win.mAttrs.type, win.mOwnerUid);</span><br><span class="line">    ...</span><br><span class="line">    surfaceController.getSurface(outSurface);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>winAnimator.createSurfaceLocked</code>其实是通过<code>SurfaceControl</code>的构造函数创建了一个<code>SurfaceControl</code>对象,这个对象的作用其实就是负责在维护<code>Surface</code>。看一下这个对象的构造方法:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">long mNativeObject; </span><br><span class="line">private SurfaceControl(SurfaceSession session, String name, int w, int h, int format, int flags,</span><br><span class="line">            SurfaceControl parent, int windowType, int ownerUid)&#123;</span><br><span class="line">    ...</span><br><span class="line">    mNativeObject &#x3D; nativeCreate(session, name, w, h, format, flags,</span><br><span class="line">        parent !&#x3D; null ? parent.mNativeObject : 0, windowType, ownerUid);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>即调用native方法<code>nativeCreate()</code>。其实是通过native创建了一个<code>Surface</code>:</p>
+<h2 id="Surface-创建"><a href="#Surface-创建" class="headerlink" title="Surface 创建"></a>Surface 创建</h2><h3 id="创建一个Surface"><a href="#创建一个Surface" class="headerlink" title="创建一个Surface"></a>创建一个Surface</h3><blockquote>
+<p>android_view_SurfaceControl.cpp </p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">static jlong nativeCreate(JNIEnv* env, ...) &#123;</span><br><span class="line">    sp&lt;SurfaceComposerClient&gt; client(android_view_SurfaceSession_getClient(env, sessionObj)); &#x2F;&#x2F;这个client其实就是前面创建的SurfaceComposerClinent</span><br><span class="line">    sp&lt;SurfaceControl&gt; surface; &#x2F;&#x2F;创建成功之后，这个指针会指向新创建的Surface</span><br><span class="line">    status_t err &#x3D; client-&gt;createSurfaceChecked(String8(name.c_str()), w, h, format, &amp;surface, flags, parent, windowType, ownerUid);</span><br><span class="line">    ...</span><br><span class="line">    return reinterpret_cast&lt;jlong&gt;(surface.get()); &#x2F;&#x2F;返回这个SurfaceControl的地址</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>SurfaceComposerClient.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">status_t SurfaceComposerClient::createSurfaceChecked(...sp&lt;SurfaceControl&gt;* outSurface..)</span><br><span class="line">&#123;</span><br><span class="line">   sp&lt;IGraphicBufferProducer&gt; gbp; &#x2F;&#x2F;这个对象很重要</span><br><span class="line">    ...</span><br><span class="line">    err &#x3D; mClient-&gt;createSurface(name, w, h, format, flags, parentHandle, windowType, ownerUid, &amp;handle, &amp;gbp);</span><br><span class="line">    if (err &#x3D;&#x3D; NO_ERROR) &#123;</span><br><span class="line">        &#x2F;&#x2F;Surface 创建成功，就创建一个SurfaceControl</span><br><span class="line">        *outSurface &#x3D; new SurfaceControl(this, handle, gbp, true &#x2F;* owned *&#x2F;);</span><br><span class="line">    &#125;</span><br><span class="line">    return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个<code>mClient</code>就是<code>ISurfaceComposerClient(aidl接口)</code>类型的对象，它可以与<code>SurfaceFlinger</code>通信, 这里调用了<code>mClient-&gt;createSurface()</code>,这里传入了一个<code>gbp(IGraphicBufferProducer)</code>对象，这个对象很重要，因为后面在UI渲染时，渲染完的一帧，实际上会添加到这个队列中。因此下面我们在跟源码时要仔细注意这个对象。除此之外还有<code>handle</code>。这两个对象在<code>mClient-&gt;createSurface()</code>完成创建后，会用来创建<code>SurfaceControl</code>对象。</p>
+<blockquote>
+<p>gui/Clinet.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">status_t Client::createSurface(...)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">    &#x2F;&#x2F;gbp 直接透传到了SurfaceFlinger</span><br><span class="line">    return mFlinger-&gt;createLayer(name, this, w, h, format, flags, windowType, ownerUid, handle, gbp, &amp;parent);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即调用<code>SurfaceFlinger</code>创建了一个<code>Layer</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">status_t SurfaceFlinger::createLayer(const String8&amp; name,const sp&lt;Client&gt;&amp; client...)</span><br><span class="line">&#123;</span><br><span class="line">    status_t result &#x3D; NO_ERROR;</span><br><span class="line">    sp&lt;Layer&gt; layer; &#x2F;&#x2F;将要创建的layer</span><br><span class="line">    switch (flags &amp; ISurfaceComposerClient::eFXSurfaceMask) &#123;</span><br><span class="line">        case ISurfaceComposerClient::eFXSurfaceNormal:</span><br><span class="line">            result &#x3D; createBufferLayer(client,</span><br><span class="line">                    uniqueName, w, h, flags, format,</span><br><span class="line">                    handle, gbp, &amp;layer); &#x2F;&#x2F; 注意gbp，这时候还没有构造呢！</span><br><span class="line">            break;</span><br><span class="line">            ... &#x2F;&#x2F;Layer 分为好几种，这里不全部列出</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    result &#x3D; addClientLayer(client, *handle, *gbp, layer, *parent);  &#x2F;&#x2F;这个layer和client相关联, 添加到Client的mLayers集合中。</span><br><span class="line">    ...</span><br><span class="line">    return result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从<code>SurfaceFlinger.createLayer()</code>方法可以看出<code>Layer</code>分为好几种。我们这里只对普通的<code>Layer</code>做一下分析，看<code>createBufferLayer()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">status_t SurfaceFlinger::createBufferLayer(const sp&lt;Client&gt;&amp; client... sp&lt;Layer&gt;* outLayer)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">    sp&lt;BufferLayer&gt; layer &#x3D; new BufferLayer(this, client, name, w, h, flags);</span><br><span class="line">    status_t err &#x3D; layer-&gt;setBuffers(w, h, format, flags);  &#x2F;&#x2F;设置layer的宽高</span><br><span class="line">    if (err &#x3D;&#x3D; NO_ERROR) &#123;</span><br><span class="line">        *handle &#x3D; layer-&gt;getHandle(); &#x2F;&#x2F;创建handle</span><br><span class="line">        *gbp &#x3D; layer-&gt;getProducer(); &#x2F;&#x2F;创建 gbp IGraphicBufferProducer</span><br><span class="line">        *outLayer &#x3D; layer; &#x2F;&#x2F;把新建的layer的指针拷贝给outLayer,这样outLayer就指向了新建的BufferLayer</span><br><span class="line">    &#125;</span><br><span class="line">    return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>由<code>layer-&gt;getProducer()</code>可以看出，一个<code>IGraphicBufferProducer</code>是属于一个<code>Layer</code>的,下面我们就来看一下它的创建过程。</p>
+<h3 id="IGraphicBufferProducer-gbp-的创建"><a href="#IGraphicBufferProducer-gbp-的创建" class="headerlink" title="IGraphicBufferProducer(gbp)的创建"></a>IGraphicBufferProducer(gbp)的创建</h3><blockquote>
+<p>BufferLayer.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sp&lt;IGraphicBufferProducer&gt; BufferLayer::getProducer() const &#123;</span><br><span class="line">    return mProducer;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>即<code>mProducer</code>其实是<code>Layer</code>的成员变量，它的创建时机是<code>Layer</code>第一次被使用时:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">void BufferLayer::onFirstRef() &#123;</span><br><span class="line">    ...</span><br><span class="line">    BufferQueue::createBufferQueue(&amp;producer, &amp;consumer, true); &#x2F;&#x2F;susionw  SurfaceFlinger构造一个 gpb buffer</span><br><span class="line">    mProducer &#x3D; new MonitoredProducer(producer, mFlinger, this);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以<code>mProducer</code>的实例是<code>MonitoredProducer</code>,但其实它只是一个装饰类，它实际功能都委托给构造它的参数<code>producer</code>:</p>
+<blockquote>
+<p>BufferQueue.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">void BufferQueue::createBufferQueue(sp&lt;IGraphicBufferProducer&gt;* outProducer,</span><br><span class="line">    ...</span><br><span class="line">    sp&lt;IGraphicBufferProducer&gt; producer(new BufferQueueProducer(core, consumerIsSurfaceFlinger));</span><br><span class="line">    sp&lt;IGraphicBufferConsumer&gt; consumer(new BufferQueueConsumer(core)); &#x2F;&#x2F;注意这个consumer</span><br><span class="line">    ...</span><br><span class="line">    *outProducer &#x3D; producer;</span><br><span class="line">    *outConsumer &#x3D; consumer;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以实际实现<code>mProducer</code>的工作的<code>queueProducer</code>是<code>BufferQueueProducer</code>。</p>
+<p>所以上面<code>SurfaceControl.nativeCreate()</code>所做的工作就是创建了一个<code>SurfaceControl</code>,并在让<code>SurfaceFlinger</code>创建了一个对应的<code>Layer</code>，<code>Layer</code>中有一个<code>IGraphicBufferProducer</code>,它的实例是<code>BufferQueueProducer</code>。</p>
+<h3 id="获取Surface"><a href="#获取Surface" class="headerlink" title="获取Surface"></a>获取Surface</h3><p>上面已经创建了一个<code>SurfaceControl</code>,那么怎么获取一个<code>Surface</code>呢？回顾一个<code>WindowManagerService.createSurfaceControl()</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">private int createSurfaceControl(Surface outSurface, int result, WindowState win,WindowStateAnimator winAnimator) &#123;</span><br><span class="line">    ...</span><br><span class="line">    surfaceController &#x3D; winAnimator.createSurfaceLocked(win.mAttrs.type, win.mOwnerUid);</span><br><span class="line">    ...</span><br><span class="line">    surfaceController.getSurface(outSurface); &#x2F;&#x2F;outSurface</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所有我们看一下<code>surfaceController.getSurface(outSurface)</code>, <code>surfaceController</code>是<code>WindowSurfaceController</code>的实例:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">void getSurface(Surface outSurface) &#123;</span><br><span class="line">    outSurface.copyFrom(mSurfaceControl);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public void copyFrom(SurfaceControl other) &#123;</span><br><span class="line">    ...</span><br><span class="line">    long surfaceControlPtr &#x3D; other.mNativeObject;</span><br><span class="line">    ...</span><br><span class="line">    long newNativeObject &#x3D; nativeGetFromSurfaceControl(surfaceControlPtr);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即<code>Surface.copyFrom()</code>方法调用<code>nativeGetFromSurfaceControl()</code>来获取一个指针，这个指针是根据前面创建的<code>SurfaceControl</code>的指针来寻找的，即传入的参数<code>surfaceControlPtr</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">static jlong nativeGetFromSurfaceControl(JNIEnv* env, jclass clazz, jlong surfaceControlNativeObj) &#123;</span><br><span class="line">    sp&lt;SurfaceControl&gt; ctrl(reinterpret_cast&lt;SurfaceControl *&gt;(surfaceControlNativeObj)); &#x2F;&#x2F;把java指针转化内native指针</span><br><span class="line">    sp&lt;Surface&gt; surface(ctrl-&gt;getSurface()); &#x2F;&#x2F;直接构造一个Surface，指向 ctrl-&gt;getSurface()</span><br><span class="line">    if (surface !&#x3D; NULL) &#123;</span><br><span class="line">        surface-&gt;incStrong(&amp;sRefBaseOwner); &#x2F;&#x2F;强引用</span><br><span class="line">    &#125;</span><br><span class="line">    return reinterpret_cast&lt;jlong&gt;(surface.get());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以看一下<code>ctrl-&gt;getSurface()</code>:</p>
+<blockquote>
+<p>SurfaceControl.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">sp&lt;Surface&gt; SurfaceControl::getSurface() const</span><br><span class="line">&#123;</span><br><span class="line">    Mutex::Autolock _l(mLock);</span><br><span class="line">    if (mSurfaceData &#x3D;&#x3D; 0) &#123;</span><br><span class="line">        return generateSurfaceLocked();</span><br><span class="line">    &#125;</span><br><span class="line">    return mSurfaceData;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">sp&lt;Surface&gt; SurfaceControl::generateSurfaceLocked() const</span><br><span class="line">&#123;</span><br><span class="line">    mSurfaceData &#x3D; new Surface(mGraphicBufferProducer, false); &#x2F;&#x2F;这个mGraphicBufferProducer其实就是上面分析的BufferQueueProducer</span><br><span class="line">    return mSurfaceData;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即直接new了一个<code>nativie的Surface</code>返回给java层，<code>java层的Surface</code>指向的就是<code>native层的Surface</code>。</p>
+<h2 id="UI渲染"><a href="#UI渲染" class="headerlink" title="UI渲染"></a>UI渲染</h2><p>经过上面我们阅读<code>ViewRootImpl.relayoutWindow()</code>方法我们知道，在java层有一个<code>SurfaceControl</code>对象来控制<code>Surface</code>的使用，<code>relayoutWindow()</code>方法会导致native构造一个<code>SurfaceControl</code>，并且<code>SurfaceFlinger</code>会构造一个<code>BufferLayer</code>，并且native也会构造一个<code>natived的Surface对象</code>，<code>java层的Surface</code>实际指向的是<code>native层的Surface</code>。</p>
+<p>到目前为止，看样相关UI渲染的对象都已经准备完毕了，那么接下来看一下UI是如何渲染的, 即看一下<code>performDraw()</code>相关的逻辑,<code>performDraw</code>最终会调用到<code>drawSoftware()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">private boolean drawSoftware(Surface surface, AttachInfo attachInfo, int xoff, int yoff,boolean scalingRequired, Rect dirty, Rect surfaceInsets) &#123;</span><br><span class="line">    &#x2F;&#x2F; Draw with software renderer.</span><br><span class="line">    final Canvas canvas;</span><br><span class="line">    ...</span><br><span class="line">    canvas &#x3D; mSurface.lockCanvas(dirty); </span><br><span class="line">    ...</span><br><span class="line">    mView.draw(canvas); </span><br><span class="line">    ...</span><br><span class="line">    surface.unlockCanvasAndPost(canvas); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>mView</code>在这里是<code>ViewRootImpl</code>的根View。<code>mView.draw(canvas)</code>会利用<code>canvas</code>来绘制整个<code>view tree</code>。<code>canvas</code>的绘制流程不是本文所探究的点，我们来看一下<code>surface.unlockCanvasAndPost(canvas)</code>,这个方法其实是把<code>canvas</code>所绘制的内容渲染到<code>surface</code>上,这个方法最终会调用到native方法<code>nativeUnlockCanvasAndPost()</code>:</p>
+<blockquote>
+<p>android_view_Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F;这个nativeObject其实指向SurfaceControl， canvasObj指向native的Canvas对象</span><br><span class="line">static void nativeUnlockCanvasAndPost(JNIEnv* env, jclass clazz,jlong nativeObject, jobject canvasObj) &#123; </span><br><span class="line">    ...</span><br><span class="line">    &#x2F;&#x2F; detach the canvas from the surface</span><br><span class="line">    Canvas* nativeCanvas &#x3D; GraphicsJNI::getNativeCanvas(env, canvasObj);  &#x2F;&#x2F; 把java canvas指针转化为native 指针</span><br><span class="line">    nativeCanvas-&gt;setBitmap(SkBitmap());</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F; unlock surface</span><br><span class="line">    status_t err &#x3D; surface-&gt;unlockAndPost();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即调用<code>surface-&gt;unlockAndPost</code>:</p>
+<blockquote>
+<p>Sruface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">status_t Surface::unlockAndPost()</span><br><span class="line">&#123;</span><br><span class="line">    if (mLockedBuffer &#x3D;&#x3D; 0) &#123;</span><br><span class="line">        ALOGE(&quot;Surface::unlockAndPost failed, no locked buffer&quot;);</span><br><span class="line">        return INVALID_OPERATION;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    int fd &#x3D; -1;</span><br><span class="line">    status_t err &#x3D; mLockedBuffer-&gt;unlockAsync(&amp;fd);</span><br><span class="line"></span><br><span class="line">    err &#x3D; queueBuffer(mLockedBuffer.get(), fd); &#x2F;&#x2F;canvas 在绘制内容时内容会绘制到 mLockedBuffer </span><br><span class="line"></span><br><span class="line">    mPostedBuffer &#x3D; mLockedBuffer;</span><br><span class="line">    mLockedBuffer &#x3D; 0;</span><br><span class="line">    return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里<code>queueBuffer()</code>是把一个绘制好的<code>buffer</code>插入到待绘制序列:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">int Surface::queueBuffer(android_native_buffer_t* buffer, int fenceFd) &#123;</span><br><span class="line">    ...</span><br><span class="line">    int i &#x3D; getSlotFromBufferLocked(buffer);</span><br><span class="line">    ...</span><br><span class="line">    IGraphicBufferProducer::QueueBufferOutput output;</span><br><span class="line">    IGraphicBufferProducer::QueueBufferInput input(timestamp, isAutoTimestamp,</span><br><span class="line">            static_cast&lt;android_dataspace&gt;(mDataSpace), crop, mScalingMode,</span><br><span class="line">            mTransform ^ mStickyTransform, fence, mStickyTransform,</span><br><span class="line">            mEnableFrameTimestamps);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    status_t err &#x3D; mGraphicBufferProducer-&gt;queueBuffer(i, input, &amp;output); &#x2F;&#x2F;susionw 把 i 放进buffer</span><br><span class="line">    ...</span><br><span class="line">    mQueueBufferCondition.broadcast();</span><br><span class="line">    return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其实核心是调用了<code>mGraphicBufferProducer-&gt;queueBuffer(i, input, &amp;output)</code>。上面我们已经分析了，我们可以把<code>mGraphicBufferProducer</code>当做<code>BufferQueueProducer</code>的实例:</p>
+<blockquote>
+<p>BufferQueueProducer.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">status_t BufferQueueProducer::queueBuffer(int slot,const QueueBufferInput &amp;input, QueueBufferOutput *output) &#123; </span><br><span class="line">    sp&lt;IConsumerListener&gt; frameAvailableListener;</span><br><span class="line">    sp&lt;IConsumerListener&gt; frameReplacedListener;</span><br><span class="line">    BufferItem item; &#x2F;&#x2F;item其实就有一个待渲染的帧</span><br><span class="line"></span><br><span class="line">    ...下面就是对item的一系列赋值操作</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line">    if (frameAvailableListener !&#x3D; NULL) &#123;</span><br><span class="line">        frameAvailableListener-&gt;onFrameAvailable(item); &#x2F;&#x2F;susionw item是一个frame，准备完毕，要通知外界</span><br><span class="line">    &#125; else if (frameReplacedListener !&#x3D; NULL) &#123;</span><br><span class="line">        frameReplacedListener-&gt;onFrameReplaced(item);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    addAndGetFrameTimestamps(&amp;newFrameEventsEntry,etFrameTimestamps ? &amp;output-&gt;frameTimestamps : nullptr);</span><br><span class="line"></span><br><span class="line">    return NO_ERROR;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里这个<code>frameAvailableListener</code>是什么呢？有兴趣的同学可以去跟一下, 不过最终回到<code>BufferLayer.onFrameAvailable()</code></p>
+<blockquote>
+<p>BufferLayer.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; ---------------------------------------------------------------------------</span><br><span class="line">&#x2F;&#x2F; Interface implementation for SurfaceFlingerConsumer::ContentsChangedListener</span><br><span class="line">&#x2F;&#x2F; ---------------------------------------------------------------------------</span><br><span class="line"></span><br><span class="line">void BufferLayer::onFrameAvailable(const BufferItem&amp; item) &#123;</span><br><span class="line">    ...</span><br><span class="line">    mFlinger-&gt;signalLayerUpdate();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法直接调用了<code>mFlinger-&gt;signalLayerUpdate()</code>,看样是要让<code>SurfaceFlinger</code>来渲染了:</p>
+<blockquote>
+<p>SurfaceFlinger.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">void SurfaceFlinger::signalLayerUpdate() &#123;</span><br><span class="line">    mEventQueue-&gt;invalidate();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>至于<code>SurfaceFlinger</code>是如何渲染的，本文就不继续追踪了。</p>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    Android的UI显示原理之Surface的渲染
+                
+            </div>
+        </a>
+    
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>

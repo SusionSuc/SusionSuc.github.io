@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset="utf-8">
+    
+    <title>Android的UI显示原理之Surface的渲染 | susion</title>
+    
+    
+        <meta name="keywords" content="Android的UI显示原理之Surface的渲染" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="本文内容接着上一篇文章Android的UI显示原理之Surface的创建继续来看Surface渲染的大致过程。   对于Surface的渲染可以转化为ViewRootImpl的渲染。因此我们从ViewRootImpl.draw()来看一下它的渲染逻辑。这个方法最终会调用到ViewRootImpl.drawSoftward(): 12345678910private boolean drawSof">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android的UI显示原理之Surface的渲染">
+<meta property="og:url" content="https://www.github.com/SusionSuc/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/index.html">
+<meta property="og:site_name" content="susion">
+<meta property="og:description" content="本文内容接着上一篇文章Android的UI显示原理之Surface的创建继续来看Surface渲染的大致过程。   对于Surface的渲染可以转化为ViewRootImpl的渲染。因此我们从ViewRootImpl.draw()来看一下它的渲染逻辑。这个方法最终会调用到ViewRootImpl.drawSoftward(): 12345678910private boolean drawSof">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/SurfaceLockCanvas.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/SurfaceUnlockCanvasAndPost%28canvas%29.png">
+<meta property="og:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/Canvas%E4%B8%8ESurface.png">
+<meta property="article:published_time" content="2019-02-28T03:09:02.369Z">
+<meta property="article:modified_time" content="2020-01-20T11:35:31.783Z">
+<meta property="article:author" content="susion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/SurfaceLockCanvas.png">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="susion" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/favicon.ico" />
+    
+
+    
+<link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+
+    
+<link rel="stylesheet" href="/libs/open-sans/styles.css">
+
+    
+<link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    
+<script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    
+<script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+
+    
+    
+        
+<link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+
+    
+    
+    
+    
+
+
+    
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">susion</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">首页</a>
+                
+                    <a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a>
+                
+                    <a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+
+    <!-- <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+        <button type="submit" class="search-form-submit"></button>
+    </form> -->
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: 'Posts',
+            PAGES: 'Pages',
+            CATEGORIES: 'Categories',
+            TAGS: 'Tags',
+            UNTITLED: '(Untitled)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+
+<script src="/js/insight.js"></script>
+
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">首页</a></td>
+                
+                    <td><a class="main-nav-link" href="https://github.com/SusionSuc" target="_blank" rel="noopener">github</a></td>
+                
+                    <td><a class="main-nav-link" href="https://juejin.im/user/57b1173f165abd0054298059" target="_blank" rel="noopener">掘金</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap" id='categories'>
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id='allExpand' href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+        
+        
+        
+         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            android
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android/Android%E4%B8%AD%E7%9A%84%E5%BC%82%E6%AD%A5%E6%B6%88%E6%81%AF%E5%A4%84%E7%90%86%E6%9C%BA%E5%88%B6/">Android中的异步消息处理机制</a></li>  <li class="file"><a href="/2019/02/28/android/Presenter%E4%B8%8EView%E7%9A%84%E8%A7%A3%E8%80%A6%E6%8E%A2%E8%AE%A8/">Presenter与View的解耦探讨</a></li>  <li class="file"><a href="/2019/02/28/android/Android%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%BB%BA%E8%AE%AE/">Android性能优化建议</a></li>  <li class="file"><a href="/2019/02/28/android/%E4%BD%BF%E7%94%A8dp%E5%81%9A%E5%B1%8F%E5%B9%95%E9%80%82%E9%85%8D%E4%BC%9A%E5%87%BA%E7%8E%B0%E7%9A%84%E9%97%AE%E9%A2%98/">使用dp做屏幕适配会出现的问题</a></li>  <li class="file"><a href="/2019/03/18/android/kotlin%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">kotlin最佳实践</a></li>  <li class="file"><a href="/2019/05/07/android/RxJava%E5%AE%9E%E8%B7%B5/">RxJava实践</a></li>  <li class="file"><a href="/2019/05/07/android/%E4%BD%BF%E7%94%A8View%E6%9D%A5%E6%90%AD%E5%BB%BAUI/">使用View来搭建UI</a></li>  <li class="file"><a href="/2019/08/29/android/%E5%88%86%E4%BA%AB%E4%B8%80%E4%B8%AA%E5%AE%9E%E7%8E%B0%E5%90%B8%E9%A1%B6Item%E7%9A%84%E7%AE%80%E5%8D%95%E6%96%B9%E6%B3%95/">分享一个实现吸顶Item的简单方法</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            gradle
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/gradle/GradleTransformAPI%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8/">GradleTransformAPI的基本使用</a></li>  <li class="file"><a href="/2019/02/28/gradle/ImplLoader%E7%BC%96%E5%86%99%E8%AE%B0%E5%BD%95/">ImplLoader编写记录</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%9E%84%E5%BB%BA%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">Gradle构建生命周期</a></li>  <li class="file"><a href="/2019/02/28/gradle/Gradle%E6%8F%92%E4%BB%B6%E7%BC%96%E5%86%99%E6%A6%82%E8%BF%B0/">Gradle插件编写概述</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            开源库
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/%E5%BC%80%E6%BA%90%E5%BA%93/%E4%BB%8E0%E5%BC%80%E5%A7%8B%E5%AE%9E%E7%8E%B0%E4%B8%80%E6%AC%BE%E7%B1%BB%E4%BC%BC%E5%BE%AE%E4%BF%A1%E3%80%81B%E7%AB%99%E7%9A%84%E5%9B%BE%E7%89%87%E6%B5%8F%E8%A7%88%E7%BB%84%E4%BB%B6/">DraggableImageViewer</a></li>  <li class="file"><a href="/2020/01/20/%E5%BC%80%E6%BA%90%E5%BA%93/life-clean/">life-clean</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            源码分析
+                        </a>
+                         <ul class="unstyled" id="tree" > 
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            booster
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/09/03/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E4%BF%AE%E5%A4%8D%E7%B3%BB%E7%BB%9Fbug/">修复系统bug</a></li>  <li class="file"><a href="/2019/09/16/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-%E7%BA%BF%E7%A8%8B%E4%BC%98%E5%8C%96&%E6%80%A7%E8%83%BD%E6%A3%80%E6%B5%8B/">线程优化&性能检测</a></li>  <li class="file"><a href="/2019/09/20/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%88%86%E6%9E%90-App%E8%B5%84%E6%BA%90%E5%8E%8B%E7%BC%A9/">App资源压缩</a></li>  <li class="file"><a href="/2019/09/23/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/booster/booster%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">booster实现原理分析</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            framework
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file active"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">Android的UI显示原理之Surface的渲染</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/">Android的UI显示原理源码流程</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E8%A7%A6%E6%91%B8%E4%BA%8B%E4%BB%B6%E5%85%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">Android触摸事件全过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/">View事件传递机制源码走查</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/ContentProvider%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B%E5%88%86%E6%9E%90/">ContentProvider启动过程分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E5%8A%A8%E7%94%BB%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/">RecyclerView动画源码浅析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93%E4%BB%A5%E5%8F%8A%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">RecyclerView的使用总结以及常见问题解决方案</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%9F%BA%E6%9C%AC%E8%AE%BE%E8%AE%A1%E7%BB%93%E6%9E%84/">RecyclerView的基本设计结构</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%88%B7%E6%96%B0%E6%9C%BA%E5%88%B6/">RecyclerView的刷新机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/RecyclerView%E7%9A%84%E5%A4%8D%E7%94%A8%E6%9C%BA%E5%88%B6/">RecyclerView的复用机制</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%BB%8E%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3BroadcastReceiver%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%BF%87%E7%A8%8B/">从源码理解BroadcastReceiver的工作过程</a></li>  <li class="file"><a href="/2019/03/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%BC%84%E6%B8%85Activity%E7%9A%84%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/">一张图弄清Activity的启动过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E5%88%9B%E5%BB%BA/">Android的UI显示原理之Surface的创建</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%88%91%E6%89%80%E7%90%86%E8%A7%A3%E7%9A%84Binder%E6%9C%BA%E5%88%B6/">我所理解的Binder机制</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">Android的UI显示原理总结</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/%E6%B7%B1%E5%85%A5%E5%89%96%E6%9E%90Window%E7%BB%84%E6%88%90/">深入剖析Window组成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            fresco
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/03/02/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1%E8%B5%8F%E6%9E%90/">Fresco架构设计赏析</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E5%9B%BE%E7%89%87%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">Fresco图片显示原理浅析</a></li>  <li class="file"><a href="/2019/03/18/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/%E6%B5%85%E8%B0%88Fresco%E7%BC%96%E7%A0%81%E5%9B%BE%E7%89%87%E7%BC%93%E5%AD%98/">Fresco缓存架构分析</a></li>  <li class="file"><a href="/2019/05/07/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/fresco/Fresco%E4%BD%BF%E7%94%A8%E7%9A%84%E6%89%A9%E5%B1%95/">Fresco使用的扩展</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            router
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E8%B7%AF%E7%94%B1%E8%A1%A8/">Arouter动态生成路由表</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E8%B7%A8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%AE%9E%E7%8E%B0%E7%B1%BB%E4%B8%8E%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%B3%A8%E5%85%A5/">Arouter跨模块加载实现类与参数的自动注入</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E9%A1%B5%E9%9D%A2%E8%B7%AF%E7%94%B1%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90/">WMRouter页面路由实例分析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A0%E8%BD%BD/">WMRouter路由节点的加载</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E6%9E%B6%E6%9E%84%E6%A2%B3%E7%90%86/">WMRouter基本路由架构梳理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/Arouter%E5%9F%BA%E6%9C%AC%E8%B7%AF%E7%94%B1%E8%BF%87%E7%A8%8B/">Arouter基本路由过程</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/router/WMRouter%E8%B7%AF%E7%94%B1%E8%8A%82%E7%82%B9%E7%9A%84%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90/">WMRouter路由节点的动态生成</a></li>  </ul> 
+                    </li> 
+                    
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            插件化
+                        </a>
+                         <ul class="unstyled" id="tree" >  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E5%90%8C%E6%AD%A5/">Replugin进程间的同步</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/Replugin%E6%8F%92%E4%BB%B6%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B%E6%A8%A1%E5%9E%8B/">Replugin插件守护进程模型</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Activity%E7%9A%84%E5%90%AF%E5%8A%A8/">VirtualApk插件Activity的启动</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6APK%E7%9A%84%E8%A7%A3%E6%9E%90/">VirtualApk插件APK的解析</a></li>  <li class="file"><a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E6%8F%92%E4%BB%B6Service%E7%9A%84%E8%BF%90%E8%A1%8C%E7%AE%A1%E7%90%86/">VirtualApk插件Service的运行管理</a></li>  <li class="file"><a href="/2019/03/13/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/%E6%8F%92%E4%BB%B6%E5%8C%96/VirtualApk%E8%A7%A3%E5%86%B3%E6%8F%92%E4%BB%B6%E8%B5%84%E6%BA%90ID%E4%B8%8E%E5%AE%BF%E4%B8%BB%E5%86%B2%E7%AA%81%E7%9A%84%E9%97%AE%E9%A2%98/">VirtualApk解决插件资源ID与宿主冲突的问题</a></li>  </ul> 
+                    </li> 
+                     </ul> 
+                    </li> 
+                     </ul> 
+    </div>
+    <script>
+        $(document).ready(function() {
+            var iconFolderOpenClass  = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({ duration: 100 });
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function(event){
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if(expanded) {
+                    subtrees.slideUp({ duration: 100 });
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({ duration: 100 });
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+                
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if(expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({ duration: 100 });
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({ duration: 100 });
+                    icon.addClass(iconAllExpandClass);
+                }
+            });  
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+            <section id="main"><article id="post-android源码分析/framework/Android的UI显示原理之Surface的渲染" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/">framework</a>
+    </div>
+
+                        <!--  -->
+                        <!-- 
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E4%B9%8BSurface%E7%9A%84%E6%B8%B2%E6%9F%93/">
+            <time datetime="2019-02-28T03:09:02.369Z" itemprop="datePublished">2019-02-28</time>
+        </a>
+    </div>
+
+ -->
+                        <!-- 
+                            <i class="fa fa-bar-chart"></i>
+                            <span id="busuanzi_container_site_pv"><span id="busuanzi_value_page_pv"></span></span>    
+                         -->
+                        <!--  -->
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Android的UI显示原理之Surface的渲染
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+        
+            
+        
+        
+            <blockquote>
+<p>本文内容接着上一篇文章<a href="Android的UI显示原理之Surface的创建.md">Android的UI显示原理之Surface的创建</a>继续来看<code>Surface</code>渲染的大致过程。 </p>
+</blockquote>
+<p>对于<code>Surface的渲染</code>可以转化为<code>ViewRootImpl</code>的渲染。因此我们从<code>ViewRootImpl.draw()</code>来看一下它的渲染逻辑。这个方法最终会调用到<code>ViewRootImpl.drawSoftward()</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">private boolean drawSoftware(Surface surface, AttachInfo attachInfo,...) &#123;</span><br><span class="line">    &#x2F;&#x2F; Draw with software renderer.</span><br><span class="line">    final Canvas canvas;</span><br><span class="line">    ...</span><br><span class="line">    canvas &#x3D; mSurface.lockCanvas(dirty);  &#x2F;&#x2F;step 1</span><br><span class="line">    ...</span><br><span class="line">    mView.draw(canvas);  &#x2F;&#x2F;setp 2</span><br><span class="line">    ...</span><br><span class="line">    mSurface.unlockCanvasAndPost(canvas);  &#x2F;&#x2F;step 3</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>mView</code>是<code>ViewRootImpl</code>的根<code>View</code>。<code>mSurface</code>即为上一篇文章分析的所创建的<code>Surface</code>，它的实际对象在nativie层。</p>
+<p>上面3步大致描绘了<code>ViewRootImpl</code>的绘制原理，本文就逐一分析这3步，来大致了解<code>ViewRootImpl</code>的渲染逻辑。</p>
+<h2 id="mSurface-lockCanvas"><a href="#mSurface-lockCanvas" class="headerlink" title="mSurface.lockCanvas()"></a>mSurface.lockCanvas()</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public Canvas lockCanvas(Rect inOutDirty)&#123;</span><br><span class="line">    ...</span><br><span class="line">    mLockedObject &#x3D; nativeLockCanvas(mNativeObject, mCanvas, inOutDirty);</span><br><span class="line">    return mCanvas;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法会直接调用到native方法<code>nativeLockCanvas(mNativeObject, mCanvas, inOutDirty)</code>。</p>
+<p><code>mNativeObject</code>就是<code>Surface</code>创建时对应的native<code>Surface</code>指针，<code>inOutDirty</code>指明了<code>lock</code>的区域。</p>
+<blockquote>
+<p>android_view_Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">static jlong nativeLockCanvas(JNIEnv* env, jclass clazz,jlong nativeObject, jobject canvasObj, jobject dirtyRectObj) &#123;</span><br><span class="line">    sp&lt;Surface&gt; surface(reinterpret_cast&lt;Surface *&gt;(nativeObject)); &#x2F;&#x2F;转换指针</span><br><span class="line">    ...</span><br><span class="line">    Rect dirtyRect(Rect::EMPTY_RECT);</span><br><span class="line">    Rect* dirtyRectPtr &#x3D; NULL;</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;获取 lock 区域</span><br><span class="line">    if (dirtyRectObj) &#123;</span><br><span class="line">        dirtyRect.left   &#x3D; env-&gt;GetIntField(dirtyRectObj, gRectClassInfo.left);</span><br><span class="line">        dirtyRect.top    &#x3D; env-&gt;GetIntField(dirtyRectObj, gRectClassInfo.top);</span><br><span class="line">        dirtyRect.right  &#x3D; env-&gt;GetIntField(dirtyRectObj, gRectClassInfo.right);</span><br><span class="line">        dirtyRect.bottom &#x3D; env-&gt;GetIntField(dirtyRectObj, gRectClassInfo.bottom);</span><br><span class="line">        dirtyRectPtr &#x3D; &amp;dirtyRect;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ANativeWindow_Buffer outBuffer;</span><br><span class="line">    status_t err &#x3D; surface-&gt;lock(&amp;outBuffer, dirtyRectPtr);</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    sp&lt;Surface&gt; lockedSurface(surface);</span><br><span class="line">    return (jlong) lockedSurface.get(); &#x2F;&#x2F;返回surface指针</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法主要新建了一个<code>Rect</code>对象，确定要<code>lock</code>的区域的参数，然后调用<code>surface-&gt;lock(&amp;outBuffer, dirtyRectPtr)</code>:</p>
+<blockquote>
+<p>Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">status_t Surface::lock(ANativeWindow_Buffer* outBuffer, ARect* inOutDirtyBounds)&#123;</span><br><span class="line"></span><br><span class="line">    ANativeWindowBuffer* out; int fenceFd &#x3D; -1;</span><br><span class="line">    status_t err &#x3D; dequeueBuffer(&amp;out, &amp;fenceFd);  &#x2F;&#x2F;从 GraphicBufferProduce 中 拿出来一个 buffer </span><br><span class="line"></span><br><span class="line">    sp&lt;GraphicBuffer&gt; backBuffer(GraphicBuffer::getSelf(out));  &#x2F;&#x2F; 构建一个 backbuffer</span><br><span class="line"></span><br><span class="line">    status_t res &#x3D; backBuffer-&gt;lockAsync(...);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看出<code>lock</code>方法，首先通过<code>dequeueBuffer</code>来获取一个<code>ANativeWindowBuffer</code>,然后利用它构造一个<code>GraphicBuffer</code>,它被称为<code>backBuffer</code>,然后调用它的<code>backBuffer-&gt;lockAsync(...)</code>,那么怎么获取一个<code>ANativeWindowBuffer</code>呢？</p>
+<h3 id="dequeueBuffer"><a href="#dequeueBuffer" class="headerlink" title="dequeueBuffer()"></a>dequeueBuffer()</h3><blockquote>
+<p>Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">int Surface::dequeueBuffer(android_native_buffer_t** buffer, int* fenceFd) &#123;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    status_t result &#x3D; mGraphicBufferProducer-&gt;dequeueBuffer(&amp;buf, &amp;fence, reqWidth, reqHeight,</span><br><span class="line">                                                            reqFormat, reqUsage, &amp;mBufferAge,</span><br><span class="line">                                                            enableFrameTimestamps ? &amp;frameTimestamps</span><br><span class="line">                                                                                  : nullptr);</span><br><span class="line">    ...经过一系列的操作，buffer最终会指向&amp;buf</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们上一篇文章中已经介绍过了<code>GraphicBufferProducer</code>，它是一个<code>Layer</code>的<code>graphic buffer producer</code>，<code>Layer</code>在绘制时，会从<code>GraphicBufferProducer</code>取出一个<code>GraphicBuffer</code>来绘制。所以可以理解为<code>GraphicBufferProducer</code>存放着一个<code>Layer</code>待绘制的一帧。<code>dequeueBuffer()</code>所做的事情就是:从<code>GraphicBufferProducer</code>取出一个<code>GraphicBuffer</code>。</p>
+<p>至于<code>backBuffer-&gt;lockAsync(...)</code>所做的操作就不细看了，可以猜想就是把这个<code>GraphicBuffer</code>锁上，保证一个<code>GraphicBuffer</code>绘制操作的不可重入。</p>
+<p>综上，<code>surface.lockCanvas()</code>的主要逻辑可以使用下面这张图来表示:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/SurfaceLockCanvas.png" alt=""></p>
+<p>即<code>mSurface.lockCanvas</code>最终是lock了一个<code>GraphicBuffer</code>。继续看<code>mView.draw(canvas)</code>:</p>
+<h2 id="mView-draw-canvas"><a href="#mView-draw-canvas" class="headerlink" title="mView.draw(canvas)"></a>mView.draw(canvas)</h2><p><code>View.draw(canvas)</code>所做的事情其实就是:根据<code>View</code>的状态来把带绘制的数据保存到<code>Canvas</code>。对<code>Canvas</code>我们到最后再来看一下它和<code>Surface</code>的关系。</p>
+<h2 id="mSurface-unlockCanvasAndPost-canvas"><a href="#mSurface-unlockCanvasAndPost-canvas" class="headerlink" title="mSurface.unlockCanvasAndPost(canvas)"></a>mSurface.unlockCanvasAndPost(canvas)</h2><p>在<code>canvas</code>的绘制数据准备ok后，<code>Surface</code>就可以开始绘制了，而绘制操作的发起点就是<code>Surface.unlockCanvasAndPost()</code>方法,这个方法会调用到:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">private void unlockSwCanvasAndPost(Canvas canvas) &#123;</span><br><span class="line">    ...</span><br><span class="line">    try &#123;</span><br><span class="line">        nativeUnlockCanvasAndPost(mLockedObject, canvas); &#x2F;&#x2F;mLockedObject其实就是native的那个surface</span><br><span class="line">    &#125; finally &#123;</span><br><span class="line">        nativeRelease(mLockedObject);</span><br><span class="line">        mLockedObject &#x3D; 0;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>继续看<code>nativeUnlockCanvasAndPost()</code></p>
+<blockquote>
+<p>android_view_Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">static void nativeUnlockCanvasAndPost(JNIEnv* env, jclass clazz,jlong nativeObject, jobject canvasObj) &#123; </span><br><span class="line">    sp&lt;Surface&gt; surface(reinterpret_cast&lt;Surface*&gt;(nativeObject));</span><br><span class="line">    ...</span><br><span class="line">    &#x2F;&#x2F; detach the canvas from the surface</span><br><span class="line">    Canvas* nativeCanvas &#x3D; GraphicsJNI::getNativeCanvas(env, canvasObj);  &#x2F;&#x2F; 把java canvas指针转化为native 指针</span><br><span class="line">    nativeCanvas-&gt;setBitmap(SkBitmap());</span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F; unlock surface</span><br><span class="line">    status_t err &#x3D; surface-&gt;unlockAndPost();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即调用了<code>surface-&gt;unlockAndPost()</code>:</p>
+<blockquote>
+<p>Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">status_t Surface::unlockAndPost()</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">    int fd &#x3D; -1;</span><br><span class="line">    status_t err &#x3D; mLockedBuffer-&gt;unlockAsync(&amp;fd);</span><br><span class="line"></span><br><span class="line">    err &#x3D; queueBuffer(mLockedBuffer.get(), fd);</span><br><span class="line"></span><br><span class="line">    mPostedBuffer &#x3D; mLockedBuffer;</span><br><span class="line">    mLockedBuffer &#x3D; 0;</span><br><span class="line">    return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里<code>mLockedBuffer</code>其实就是前面的<code>backBuffer</code>。<code>mLockedBuffer-&gt;unlockAsync(&amp;fd)</code>的操作其实很简单，就是解除<code>GraphicBuffer</code>的lock状态，主要看一下<code>queueBuffer(mLockedBuffer.get(), fd)</code></p>
+<blockquote>
+<p>Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">int Surface::queueBuffer(android_native_buffer_t* buffer, int fenceFd) &#123;</span><br><span class="line">    ...</span><br><span class="line">    int i &#x3D; getSlotFromBufferLocked(buffer); </span><br><span class="line">    ...</span><br><span class="line">    IGraphicBufferProducer::QueueBufferOutput output;</span><br><span class="line">    IGraphicBufferProducer::QueueBufferInput input(timestamp, isAutoTimestamp,</span><br><span class="line">            static_cast&lt;android_dataspace&gt;(mDataSpace), crop, mScalingMode,</span><br><span class="line">            mTransform ^ mStickyTransform, fence, mStickyTransform,</span><br><span class="line">            mEnableFrameTimestamps);</span><br><span class="line">    ...</span><br><span class="line">    status_t err &#x3D; mGraphicBufferProducer-&gt;queueBuffer(i, input, &amp;output); </span><br><span class="line">    ...</span><br><span class="line">    mQueueBufferCondition.broadcast();</span><br><span class="line">    return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对于<code>input</code>和<code>output</code>这里先不做细追，<strong>我猜测<code>input</code>中应该包含绘制的数据</strong>。但<code>getSlotFromBufferLocked(buffer)</code>是干什么的呢？它其实就是获取真正的<code>GraphicBuffer</code>的在<code>mSlots</code>集合中真正的index:</p>
+<blockquote>
+<p>Surface.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">int Surface::getSlotFromBufferLocked(android_native_buffer_t* buffer) const &#123;</span><br><span class="line">    for (int i &#x3D; 0; i &lt; NUM_BUFFER_SLOTS; i++) &#123;</span><br><span class="line">        if (mSlots[i].buffer !&#x3D; NULL &amp;&amp; mSlots[i].buffer-&gt;handle &#x3D;&#x3D; buffer-&gt;handle) &#123;</span><br><span class="line">            return i;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    return BAD_VALUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对于<code>mSlots</code>集合，可以认为他就是按顺序保存<code>GraphicBuffer</code>的数组即可:</p>
+<blockquote>
+<p>Surface.h</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; mSlots stores the buffers that have been allocated for each buffer slot.</span><br><span class="line">&#x2F;&#x2F; It is initialized to null pointers, and gets filled in with the result of</span><br><span class="line">&#x2F;&#x2F; IGraphicBufferProducer::requestBuffer when the client dequeues a buffer from a</span><br><span class="line">&#x2F;&#x2F; slot that has not yet been used. The buffer allocated to a slot will also</span><br><span class="line">&#x2F;&#x2F; be replaced if the requested buffer usage or geometry differs from that</span><br><span class="line">&#x2F;&#x2F; of the buffer allocated to a slot.</span><br><span class="line">BufferSlot mSlots[NUM_BUFFER_SLOTS];</span><br></pre></td></tr></table></figure>
+
+
+<p>继续看<code>mGraphicBufferProducer-&gt;queueBuffer(i, input, &amp;output)</code>, 通过上一篇文章已经知道<code>mGraphicBufferProducer</code>是<code>BufferQueueProducer</code>的实例:</p>
+<blockquote>
+<p>BufferQueueProducer.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">status_t BufferQueueProducer::queueBuffer(int slot, const QueueBufferInput &amp;input, QueueBufferOutput *output) &#123; </span><br><span class="line"></span><br><span class="line">    &#x2F;&#x2F;从input中获取一些列参数</span><br><span class="line">    input.deflate(&amp;requestedPresentTimestamp, &amp;isAutoTimestamp, &amp;dataSpace,</span><br><span class="line">        &amp;crop, &amp;scalingMode, &amp;transform, &amp;acquireFence, &amp;stickyTransform,</span><br><span class="line">        &amp;getFrameTimestamps);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    sp&lt;IConsumerListener&gt; frameAvailableListener;</span><br><span class="line">    sp&lt;IConsumerListener&gt; frameReplacedListener;</span><br><span class="line">    BufferItem item; &#x2F;&#x2F;可以理解为一个待渲染的帧</span><br><span class="line"></span><br><span class="line">    ...下面就是对item的一系列赋值操作</span><br><span class="line"></span><br><span class="line">    item.mAcquireCalled &#x3D; mSlots[slot].mAcquireCalled; </span><br><span class="line">    item.mGraphicBuffer &#x3D; mSlots[slot].mGraphicBuffer; &#x2F;&#x2F;根据slot获取GraphicBuffer。</span><br><span class="line">    item.mCrop &#x3D; crop;</span><br><span class="line">    item.mTransform &#x3D; transform &amp;</span><br><span class="line">            ~static_cast&lt;uint32_t&gt;(NATIVE_WINDOW_TRANSFORM_INVERSE_DISPLAY);</span><br><span class="line">    item.mTransformToDisplayInverse &#x3D;</span><br><span class="line">            (transform &amp; NATIVE_WINDOW_TRANSFORM_INVERSE_DISPLAY) !&#x3D; 0;</span><br><span class="line">    item.mScalingMode &#x3D; static_cast&lt;uint32_t&gt;(scalingMode);</span><br><span class="line">    item.mTimestamp &#x3D; requestedPresentTimestamp;</span><br><span class="line">    item.mIsAutoTimestamp &#x3D; isAutoTimestamp;</span><br><span class="line">    </span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    if (frameAvailableListener !&#x3D; NULL) &#123;</span><br><span class="line">        frameAvailableListener-&gt;onFrameAvailable(item); &#x2F;&#x2F;item是一个frame，准备完毕，要通知外界</span><br><span class="line">    &#125; else if (frameReplacedListener !&#x3D; NULL) &#123;</span><br><span class="line">        frameReplacedListener-&gt;onFrameReplaced(item);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    addAndGetFrameTimestamps(&amp;newFrameEventsEntry,etFrameTimestamps ? &amp;output-&gt;frameTimestamps : nullptr);</span><br><span class="line"></span><br><span class="line">    return NO_ERROR;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>其实从<code>queueBuffer()</code>可以看出,<code>mGraphicBufferProducer</code>中存放的都是可以被渲染的<code>GraphicBuffer</code>,这个<code>buffer</code>可能被渲染完毕，也可能处于待渲染状态。</p>
+</blockquote>
+<p><code>queueBuffer</code>的主要操作是根据输入参数完善一个<code>BufferItem</code>,然后通知外界去绘制这个<code>BufferItem</code>。这里这个<code>frameAvailableListener</code>是什么呢？有兴趣的同学可以去跟一下, 不过最终回到<code>BufferLayer.onFrameAvailable()</code>:</p>
+<blockquote>
+<p>BufferLayer.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; ---------------------------------------------------------------------------</span><br><span class="line">&#x2F;&#x2F; Interface implementation for SurfaceFlingerConsumer::ContentsChangedListener</span><br><span class="line">&#x2F;&#x2F; ---------------------------------------------------------------------------</span><br><span class="line">void BufferLayer::onFrameAvailable(const BufferItem&amp; item) &#123;</span><br><span class="line">    ...</span><br><span class="line">    mFlinger-&gt;signalLayerUpdate();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个方法直接调用了<code>mFlinger-&gt;signalLayerUpdate()</code>,看样是要让<code>SurfaceFlinger</code>来渲染了:</p>
+<blockquote>
+<p>SurfaceFlinger.cpp</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">void SurfaceFlinger::signalLayerUpdate() &#123;</span><br><span class="line">    mEventQueue-&gt;invalidate();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>至于<code>SurfaceFlinger</code>是如何渲染的，本文就不继续追踪了。用下面这张图总结一下<code>mSurface.unlockCanvasAndPost(canvas)</code>:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/SurfaceUnlockCanvasAndPost%28canvas%29.png" alt=""></p>
+<h2 id="Canvas与Surface"><a href="#Canvas与Surface" class="headerlink" title="Canvas与Surface"></a>Canvas与Surface</h2><p><code>Canvas</code>是一个绘图的工具类，其API提供了一系列绘图指令供开发者使用。根据绘制加速模式的不同，<code>Canvas</code>有软件<code>Canvas</code>与硬件<code>Canvas</code>只分。<code>Canvas</code>的绘图指令可以分为两个部分:</p>
+<ul>
+<li>绘制指令:这些最常用的指令由一系列名为<code>drawXXX</code>的方法提供。他们用来实现实际的绘制行为，例如绘制点、线、圆以及方块等。</li>
+<li>辅助指令:这些用于提供辅助功能的指令将会影响后续绘制指令的效果，如设置变换、裁剪区域等。<code>Canvas</code>还提供了<code>save</code>与<code>resotore</code>用于撤销一部分辅助指令的效果。</li>
+</ul>
+<p>对于软件<code>Canvas</code>来说，其绘制目标是一个位图<code>Bitmap</code>。在<code>Surface.unlockAndPost</code>时，这个<code>Bitmap</code>所描述的内容会反映到<code>Surface</code>的<code>Buffer</code>中。可以用下面这张图来表示:</p>
+<p><img src="https://susionblogimage.oss-cn-beijing.aliyuncs.com/openlib/sourcecodeanalyzer/framework/ui/Canvas%E4%B8%8ESurface.png" alt=""></p>
+<blockquote>
+<p>参考文章</p>
+</blockquote>
+<ul>
+<li>《深入理解Android 卷3》</li>
+</ul>
+
+            </div>
+        
+        <footer class="article-footer">
+        </footer>
+    </div>
+</article>
+
+<!-- 
+    
+<nav id="article-nav">
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/View%E4%BA%8B%E4%BB%B6%E4%BC%A0%E9%80%92%E6%9C%BA%E5%88%B6%E6%BA%90%E7%A0%81%E8%B5%B0%E6%9F%A5/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Newer</strong>
+            <div class="article-nav-title">
+                
+                    View事件传递机制源码走查
+                
+            </div>
+        </a>
+    
+    
+        <a href="/2019/02/28/android%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/framework/Android%E7%9A%84UI%E6%98%BE%E7%A4%BA%E5%8E%9F%E7%90%86%E6%BA%90%E7%A0%81%E6%B5%81%E7%A8%8B/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">Older</strong>
+            <div class="article-nav-title">Android的UI显示原理源码流程</div>
+        </a>
+    
+</nav>
+
+
+
+
+
+    
+    
+
+ -->
+
+
+<!-- baidu url auto push script -->
+<script type="text/javascript">
+    !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=window.location.href,o=document.referrer;if(!e.test(r)){var n="//api.share.baidu.com/s.gif";o?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var t=new Image;t.src=n}}(window);
+</script>     
+</section>
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            susion &copy; 2020 
+            <!-- <a rel="license noopener" href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <!-- <br> Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" target="_blank" rel="noopener">wikitten</a> -->
+            <!-- 
+                <br>
+                <span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i> <span id="busuanzi_value_site_pv"></span></span>
+                &nbsp;|&nbsp;
+                <span id="busuanzi_container_site_pv"><i class="fa fa-user"></i> <span id="busuanzi_value_site_uv"></span></span>
+             -->
+        </div>
+    </div>
+</footer>
+
+        
+
+    
+        
+<script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-share.min.js"></script>
+
+        
+<script src="/libs/lightgallery/js/lg-video.min.js"></script>
+
+    
+    
+        
+<script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+
+<script src="/js/main.js"></script>
+
+
+    </div>
+</body>
+</html>
